@@ -1,23 +1,22 @@
+using System.Net;
 using System.Net.Sockets;
 
 namespace TheFracturedRealm.Server;
 
-public sealed class Server
+public static class Server
 {
-    private readonly TcpListener _listener;
-    public Server(TcpListener listener)
+    public static async Task RunAsync()
     {
-        _listener = listener;
-    }
-
-    public async Task RunAsync()
-    {
-        _listener.Start();
+        #pragma warning disable CA2000
+        var listener = new TcpListener(IPAddress.Any, 4000);
+        #pragma warning restore CA2000
+        listener.Start();
         Console.WriteLine("Server started on port 4000.");
         while (true)
         {
-            var client = await _listener.AcceptTcpClientAsync();
-            await ConnectionHandler.HandleConnectionAsync(client);
+            var tcpClient = await listener.AcceptTcpClientAsync();
+            var mudClient = new MudClient(tcpClient);
+            await ConnectionHandler.HandleConnectionAsync(mudClient);
         }
     }
 }
