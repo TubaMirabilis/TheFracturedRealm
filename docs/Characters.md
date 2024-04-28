@@ -18,7 +18,7 @@ The game world is also home to a variety of enemies, including rival factions, b
 
 ## Character Progression
 
-Characters can gain experience, level up, and acquire new skills and abilities as they progress through the game. Players can customize their characters' development to suit their playstyle and strategic goals.
+Characters can gain experience, level up, and acquire new skills and abilities as they progress through the game. Players can customize their characters' development to suit their playing style and strategic goals.
 
 ## Character Creation
 
