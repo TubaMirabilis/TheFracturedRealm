@@ -1,4 +1,5 @@
 using System.Net.Sockets;
+using TheFracturedRealm.Domain;
 
 namespace TheFracturedRealm.Server;
 
@@ -9,6 +10,6 @@ public class MudClient
     {
         _tcpClient = tcpClient;
     }
-    public string? PlayerName { get; set; }
+    public Character? Character { get; set; }
     public NetworkStream GetStream() => _tcpClient.GetStream();
 }
