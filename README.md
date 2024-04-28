@@ -9,7 +9,7 @@ In The Fractured Realm, players enter a once-vast empire now fragmented into war
 - **Dynamic World:** The game world evolves based on player actions, with territories changing hands, alliances forming and breaking, and new factions emerging over time.
 - **Political Intrigue:** Players must engage in diplomacy, negotiation, and backstabbing to gain power and influence.
 - **Resource Management:** Manage resources to build armies, fortify territories, and engage in trade.
-- **Army Building:** Recruit and train units to form powerful armies capable of conquering rival territories.
+- **Building Armies:** Recruit and train units to form powerful armies capable of conquering rival territories.
 - **Quests and Events:** Engage in quests and events to gain rewards, unlock new abilities, and shape the game world.
 
 ## Platforms
