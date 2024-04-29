@@ -23,6 +23,10 @@ public class Character
     public int Wisdom { get; set; }
     public int Constitution { get; set; }
     public int Charisma { get; set; }
+    public int Hunger { get; set; }
+    public int Thirst { get; set; }
+    public int Fatigue { get; set; }
+    public int Sobriety { get; set; }
     public int Experience { get; set; }
     public int Gold { get; set; }
     public int Silver { get; set; }
