@@ -19,6 +19,7 @@ The Fractured Realm will be a text-based Multi-user dungeon (MUD) game accessibl
 ## Development Team
 
 - **Project Lead:** [Benjamin Green](https://github.com/tubamirabilis)
+- **Principal Consultant:** Harly Reimer
 
 ## Contributing
 
