@@ -17,4 +17,4 @@ services.AddSingleton<Server>();
 services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
 var serviceProvider = services.BuildServiceProvider();
 var server = serviceProvider.GetRequiredService<Server>();
-await server.RunAsync();
+await server.RunAsync(CancellationToken.None);

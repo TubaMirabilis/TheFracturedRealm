@@ -4,7 +4,7 @@ using TheFracturedRealm.Domain;
 
 namespace TheFracturedRealm.Server;
 
-public sealed class MudClient : IDisposable
+internal sealed class MudClient : IDisposable
 {
     private readonly TcpClient _tcpClient;
     public MudClient(TcpClient tcpClient)
@@ -21,8 +21,5 @@ public sealed class MudClient : IDisposable
         var messageBytes = Encoding.UTF8.GetBytes(message);
         await stream.WriteAsync(messageBytes);
     }
-    public void Dispose()
-    {
-        _tcpClient.Dispose();
-    }
+    public void Dispose() => _tcpClient.Dispose();
 }

@@ -1,24 +1,22 @@
 using System.Collections.Concurrent;
-using System.Collections.Generic;
 using System.Globalization;
 using System.Net;
 using System.Net.Sockets;
 using System.Reflection;
-using System.Runtime.CompilerServices;
 using System.Text;
 using Mediator;
 using Microsoft.Extensions.DependencyInjection;
 using Serilog;
-using Serilog.Core;
 
 namespace TheFracturedRealm.Server;
 
-public sealed class Server
+internal sealed class Server
 {
-    private readonly TcpListener _listener;
-    private readonly IServiceScopeFactory _serviceScopeFactory;
-    private readonly ILogger _logger;
+    private readonly Assembly _assembly = Assembly.Load("TheFracturedRealm.Application");
     private readonly ConcurrentDictionary<Guid, MudClient> _clients;
+    private readonly TcpListener _listener;
+    private readonly ILogger _logger;
+    private readonly IServiceScopeFactory _serviceScopeFactory;
     public Server(TcpListener listener, IServiceScopeFactory serviceScopeFactory, ILogger logger)
     {
         _listener = listener;
@@ -26,19 +24,25 @@ public sealed class Server
         _logger = logger;
         _clients = new ConcurrentDictionary<Guid, MudClient>();
     }
-    public async Task RunAsync()
+    public async Task RunAsync(CancellationToken ct)
     {
         _listener.Start();
         var port = ((IPEndPoint)_listener.LocalEndpoint).Port;
         _logger.Information("Server started on port {Port}.", port);
         try
         {
-            while (true)
+            while (!ct.IsCancellationRequested)
             {
-                var tcpClient = await _listener.AcceptTcpClientAsync();
+                var tcpClient = await _listener.AcceptTcpClientAsync(ct);
                 var mudClient = new MudClient(tcpClient);
-                _clients.TryAdd(mudClient.Id, mudClient);
-                await Task.Run(() => ProcessClient(mudClient))
+                var added = _clients.TryAdd(mudClient.Id, mudClient);
+                if (!added)
+                {
+                    _logger.Warning("Client {ClientId} already exists.", mudClient.Id);
+                    mudClient.Dispose();
+                    continue;
+                }
+                _ = Task.Run(() => ProcessClient(mudClient), ct)
                     .ContinueWith(t =>
                     {
                         if (t.IsFaulted)
@@ -54,56 +58,58 @@ public sealed class Server
             _listener.Stop();
         }
     }
-    private async Task ProcessClient(MudClient mudClient)
-    {
-        try
-        {
-            await HandleConnectionAsync(mudClient);
-        }
-        finally
-        {
-            mudClient.Dispose();
-        }
-    }
+    private async Task ProcessClient(MudClient mudClient) => await HandleConnectionAsync(mudClient);
     private void RemoveClient(Guid clientId)
     {
-        if (_clients.TryRemove(clientId, out MudClient? client))
+        if (_clients.TryRemove(clientId, out var client))
         {
-            client.Dispose(); // Ensure all resources are released
+            client.Dispose();
             _logger.Information("Client {ClientId} disconnected and resources cleaned up.", clientId);
         }
     }
     private async Task HandleConnectionAsync(MudClient mudClient)
     {
-        using var stream = mudClient.GetStream();
+        var stream = mudClient.GetStream();
         using var scope = _serviceScopeFactory.CreateScope();
         var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-        var assembly = Assembly.Load("TheFracturedRealm.Application");
-        var buffer = new byte[1024];
+
+        var readBuffer = new byte[1024];
+        var messageBuffer = new List<byte>();
+
         int bytesRead;
-        while ((bytesRead = await stream.ReadAsync(buffer)) != 0)
+        while ((bytesRead = await stream.ReadAsync(readBuffer.AsMemory(0, readBuffer.Length))) != 0)
         {
-            var request = Encoding.UTF8.GetString(buffer, 0, bytesRead);
-            _logger.Information("Received: {Request}", request);
-            var alias = request.Split(' ')[0];
-            var args = request.Substring(alias.Length).Trim();
-            var parts = alias.Split('-');
-            var command = string.Join("", parts.Select(p => char.ToUpper(p[0], CultureInfo.InvariantCulture) + p[1..]));
-            var type = assembly.GetType($"MyMud.Application.Commands.{command}Command");
-            if (type is null)
+            messageBuffer.AddRange(readBuffer.AsSpan(0, bytesRead).ToArray());
+
+            int delimiterIndex;
+            while ((delimiterIndex = messageBuffer.IndexOf((byte)'\n')) != -1)
             {
-                _logger.Warning("Command {Command} not found.", command);
-                await stream.WriteAsync(Encoding.UTF8.GetBytes("Command not found."));
-                continue;
+                var messageBytes = messageBuffer.Take(delimiterIndex).ToArray();
+                messageBuffer.RemoveRange(0, delimiterIndex + 1);
+
+                var request = Encoding.UTF8.GetString(messageBytes).TrimEnd('\r');
+
+                _logger.Information("Received: {Request}", request);
+                var alias = request.Split(' ')[0];
+                var args = request[alias.Length..].Trim();
+                var parts = alias.Split('-');
+                var command = string.Join("", parts.Select(p => char.ToUpper(p[0], CultureInfo.InvariantCulture) + p[1..]));
+                var type = _assembly.GetType($"TheFracturedRealm.Application.Commands.{command}Command");
+                if (type is null)
+                {
+                    _logger.Warning("Command {Command} not found.", command);
+                    await stream.WriteAsync(Encoding.UTF8.GetBytes("Command not found.\n"));
+                    continue;
+                }
+                var instance = Activator.CreateInstance(type, args);
+                if (instance is null)
+                {
+                    _logger.Error("Error creating instance of {Type}.", type.Name);
+                    await stream.WriteAsync(Encoding.UTF8.GetBytes("Error creating instance.\n"));
+                    continue;
+                }
+                await sender.Send(instance);
             }
-            var instance = Activator.CreateInstance(type, args);
-            if (instance is null)
-            {
-                _logger.Error("Error creating instance of {Type}.", type.Name);
-                await stream.WriteAsync(Encoding.UTF8.GetBytes("Error creating instance."));
-                continue;
-            }
-            await sender.Send(instance);
         }
     }
 }
