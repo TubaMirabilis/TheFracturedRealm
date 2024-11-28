@@ -14,6 +14,7 @@ var services = new ServiceCollection();
 services.AddSingleton<ILogger>(logger);
 services.AddSingleton<TcpListener>(listener);
 services.AddSingleton<Server>();
+services.AddSingleton<IMudClientPool, MudClientPool>();
 services.AddMediator(options => options.ServiceLifetime = ServiceLifetime.Scoped);
 var serviceProvider = services.BuildServiceProvider();
 var server = serviceProvider.GetRequiredService<Server>();

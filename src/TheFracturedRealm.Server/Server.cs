@@ -12,17 +12,19 @@ namespace TheFracturedRealm.Server;
 
 internal sealed class Server
 {
-    private readonly Assembly _assembly = Assembly.Load("TheFracturedRealm.Application");
-    private readonly ConcurrentDictionary<Guid, MudClient> _clients;
+    private readonly List<TypeInfo> _requestTypes;
+    private readonly IMudClientPool _clients;
     private readonly TcpListener _listener;
     private readonly ILogger _logger;
     private readonly IServiceScopeFactory _serviceScopeFactory;
-    public Server(TcpListener listener, IServiceScopeFactory serviceScopeFactory, ILogger logger)
+    public Server(TcpListener listener, IServiceScopeFactory serviceScopeFactory, ILogger logger, IMudClientPool clients)
     {
+        var assembly = Assembly.Load("TheFracturedRealm.Application");
+        _requestTypes = assembly.DefinedTypes.Where(t => t.IsAssignableTo(typeof(IRequest<>))).ToList();
         _listener = listener;
         _serviceScopeFactory = serviceScopeFactory;
         _logger = logger;
-        _clients = new ConcurrentDictionary<Guid, MudClient>();
+        _clients = clients;
     }
     public async Task RunAsync(CancellationToken ct)
     {
@@ -34,12 +36,11 @@ internal sealed class Server
             while (!ct.IsCancellationRequested)
             {
                 var tcpClient = await _listener.AcceptTcpClientAsync(ct);
-                var mudClient = new MudClient(tcpClient);
-                var added = _clients.TryAdd(mudClient.Id, mudClient);
+                using var mudClient = new MudClient(tcpClient);
+                var added = _clients.TryAddClient(mudClient);
                 if (!added)
                 {
                     _logger.Warning("Client {ClientId} already exists.", mudClient.Id);
-                    mudClient.Dispose();
                     continue;
                 }
                 _ = HandleClientAsync(mudClient, ct);
@@ -89,8 +90,9 @@ internal sealed class Server
                     var alias = request.Split(' ')[0];
                     var args = request[alias.Length..].Trim();
                     var parts = alias.Split('-');
-                    var command = string.Join("", parts.Select(p => char.ToUpper(p[0], CultureInfo.InvariantCulture) + p[1..]));
-                    var type = _assembly.GetType($"TheFracturedRealm.Application.Commands.{command}Command");
+                    var command = string.Join("", parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..])) + "Command";
+                    var query = string.Join("", parts.Select(p => char.ToUpperInvariant(p[0]) + p[1..])) + "Query";
+                    var type = _requestTypes.SingleOrDefault(t => t.Name == command || t.Name == query);
                     if (type is null)
                     {
                         _logger.Warning("Command {Command} not found.", command);
@@ -115,10 +117,8 @@ internal sealed class Server
     }
     private void RemoveClient(Guid clientId)
     {
-        if (_clients.TryRemove(clientId, out var client))
-        {
-            client.Dispose();
-            _logger.Information("Client {ClientId} disconnected and resources cleaned up.", clientId);
-        }
+        var removed = _clients.TryRemoveClient(clientId);
+        var message = removed ? "Client {ClientId} removed." : "Client {ClientId} not found.";
+        _logger.Information(message, clientId);
     }
 }
