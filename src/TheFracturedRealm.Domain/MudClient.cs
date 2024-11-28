@@ -2,9 +2,9 @@ using System.Net.Sockets;
 using System.Text;
 using TheFracturedRealm.Domain;
 
-namespace TheFracturedRealm.Server;
+namespace TheFracturedRealm.Domain;
 
-internal sealed class MudClient : IDisposable
+public sealed class MudClient : IDisposable
 {
     private readonly TcpClient _tcpClient;
     public MudClient(TcpClient tcpClient)

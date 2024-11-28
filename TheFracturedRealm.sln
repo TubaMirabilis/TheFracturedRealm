@@ -9,6 +9,10 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Server", 
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Domain", "src\TheFracturedRealm.Domain\TheFracturedRealm.Domain.csproj", "{77B39928-980F-4DEA-B725-270562E15ED0}"
 EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Application", "src\TheFracturedRealm.Application\TheFracturedRealm.Application.csproj", "{D1F989BA-FB11-42F4-9BE6-9E06449050A4}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Infrastructure", "src\TheFracturedRealm.Infrastructure\TheFracturedRealm.Infrastructure.csproj", "{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -26,9 +30,19 @@ Global
 		{77B39928-980F-4DEA-B725-270562E15ED0}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{77B39928-980F-4DEA-B725-270562E15ED0}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{77B39928-980F-4DEA-B725-270562E15ED0}.Release|Any CPU.Build.0 = Release|Any CPU
+		{D1F989BA-FB11-42F4-9BE6-9E06449050A4}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{D1F989BA-FB11-42F4-9BE6-9E06449050A4}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{D1F989BA-FB11-42F4-9BE6-9E06449050A4}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{D1F989BA-FB11-42F4-9BE6-9E06449050A4}.Release|Any CPU.Build.0 = Release|Any CPU
+		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BA37D8D2-3B92-411D-86C2-FB93FEAFB4D2} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
 		{77B39928-980F-4DEA-B725-270562E15ED0} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
+		{D1F989BA-FB11-42F4-9BE6-9E06449050A4} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
+		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
 	EndGlobalSection
 EndGlobal

@@ -1,8 +1,10 @@
 using System.Collections.Concurrent;
+using TheFracturedRealm.Application.Abstractions;
+using TheFracturedRealm.Domain;
 
-namespace TheFracturedRealm.Server;
+namespace TheFracturedRealm.Infrastructure;
 
-internal sealed class MudClientPool : IMudClientPool
+public sealed class MudClientPool : IMudClientPool
 {
     private readonly ConcurrentDictionary<Guid, MudClient> _clients;
     public MudClientPool() => _clients = new ConcurrentDictionary<Guid, MudClient>();

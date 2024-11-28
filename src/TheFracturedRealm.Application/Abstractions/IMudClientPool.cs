@@ -1,6 +1,8 @@
-namespace TheFracturedRealm.Server;
+using TheFracturedRealm.Domain;
 
-internal interface IMudClientPool
+namespace TheFracturedRealm.Application.Abstractions;
+
+public interface IMudClientPool
 {
     bool TryAddClient(MudClient client);
     bool TryRemoveClient(Guid clientId);

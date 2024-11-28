@@ -1,16 +1,16 @@
 ﻿<Project Sdk="Microsoft.NET.Sdk">
 
   <ItemGroup>
-    <ProjectReference Include="..\TheFracturedRealm.Domain\TheFracturedRealm.Domain.csproj" />
+    <ProjectReference Include="..\TheFracturedRealm.Application\TheFracturedRealm.Application.csproj" />
+    <ProjectReference Include="..\TheFracturedRealm.Infrastructure\TheFracturedRealm.Infrastructure.csproj" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Update="SonarAnalyzer.CSharp" Version="9.32.0.97167" />
+    <PackageReference Update="SonarAnalyzer.CSharp" Version="10.3.0.106239" />
   </ItemGroup>
 
   <ItemGroup>
-    <PackageReference Include="Mediator.Abstractions" Version="2.1.7" />
-    <PackageReference Include="Mediator.SourceGenerator" Version="2.1.7">
+    <PackageReference Include="Mediator.SourceGenerator" Version="3.0.0-preview.27">
       <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
       <PrivateAssets>all</PrivateAssets>
     </PackageReference>
