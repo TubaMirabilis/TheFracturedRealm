@@ -21,4 +21,9 @@ public sealed class MudClientPool : IMudClientPool
     public MudClient? GetClient(Guid clientId) =>
         _clients.TryGetValue(clientId, out var client) ? client : null;
     public IReadOnlyCollection<MudClient> GetAllClients() => _clients.Values.ToList().AsReadOnly();
+    public async Task NotifyAllAsync(string message)
+    {
+        var tasks = _clients.Values.Select(client => client.NotifyAsync(message));
+        await Task.WhenAll(tasks);
+    }
 }

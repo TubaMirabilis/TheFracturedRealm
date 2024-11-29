@@ -8,4 +8,5 @@ public interface IMudClientPool
     bool TryRemoveClient(Guid clientId);
     MudClient? GetClient(Guid clientId);
     IReadOnlyCollection<MudClient> GetAllClients();
+    Task NotifyAllAsync(string message);
 }
