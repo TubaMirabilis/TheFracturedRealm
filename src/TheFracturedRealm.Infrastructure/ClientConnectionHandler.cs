@@ -26,7 +26,7 @@ public sealed class ClientConnectionHandler : IClientConnectionHandler
 
     public Task HandleClient(TcpClient tcpClient, CancellationToken ct)
     {
-        using var mudClient = new MudClient(tcpClient);
+        var mudClient = new MudClient(tcpClient);
         var added = _clients.TryAddClient(mudClient);
         if (!added)
         {
@@ -48,6 +48,7 @@ public sealed class ClientConnectionHandler : IClientConnectionHandler
         finally
         {
             RemoveClient(mudClient.Id);
+            mudClient.Dispose();
         }
     }
     private async Task HandleConnectionAsync(MudClient mudClient, CancellationToken ct)

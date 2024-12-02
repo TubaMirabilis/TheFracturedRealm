@@ -23,7 +23,8 @@ public sealed class MudClientPool : IMudClientPool
     public IReadOnlyCollection<MudClient> GetAllClients() => _clients.Values.ToList().AsReadOnly();
     public async Task NotifyAllAsync(string message)
     {
-        var tasks = _clients.Values.Select(client => client.NotifyAsync(message));
+        var clients = _clients.Values.ToList();
+        var tasks = clients.Select(client => client.NotifyAsync(message));
         await Task.WhenAll(tasks);
     }
 }
