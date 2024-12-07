@@ -13,6 +13,7 @@ var logger = new LoggerConfiguration()
     .WriteTo.Console(formatProvider: CultureInfo.InvariantCulture)
     .CreateLogger();
 var services = new ServiceCollection();
+services.AddSingleton<IRequestRegistry>(new ReflectionBasedRequestRegistry(typeof(IRequestRegistry).Assembly));
 services.AddSingleton<ILogger>(logger);
 services.AddSingleton<TcpListener>(listener);
 services.AddSingleton<Server>();
