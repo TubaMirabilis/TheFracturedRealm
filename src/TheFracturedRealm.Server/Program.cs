@@ -14,6 +14,8 @@ var logger = new LoggerConfiguration()
     .CreateLogger();
 var services = new ServiceCollection();
 services.AddSingleton<IRequestRegistry>(new ReflectionBasedRequestRegistry(typeof(IRequestRegistry).Assembly));
+services.AddScoped<IClientRequestProcessor, ClientRequestProcessor>();
+services.AddScoped<IClientMessageReader, ClientMessageReader>();
 services.AddSingleton<ILogger>(logger);
 services.AddSingleton<TcpListener>(listener);
 services.AddSingleton<Server>();

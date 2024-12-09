@@ -14,59 +14,14 @@ public sealed class ClientConnectionHandler : IClientConnectionHandler
     private readonly IServiceScopeFactory _serviceScopeFactory;
     private readonly IMudClientPool _clients;
     private readonly ILogger<ClientConnectionHandler> _logger;
-    private readonly IRequestRegistry _requestRegistry;
     public ClientConnectionHandler(
         IMudClientPool clients,
         ILogger<ClientConnectionHandler> logger,
-        IServiceScopeFactory serviceScopeFactory,
-        IRequestRegistry requestRegistry)
+        IServiceScopeFactory serviceScopeFactory)
     {
         _serviceScopeFactory = serviceScopeFactory;
         _clients = clients;
         _logger = logger;
-        _requestRegistry = requestRegistry;
-    }
-    private async Task HandleConnectionAsync(MudClient mudClient, CancellationToken ct)
-    {
-        try
-        {
-            var stream = mudClient.GetStream();
-            using var scope = _serviceScopeFactory.CreateScope();
-            var sender = scope.ServiceProvider.GetRequiredService<ISender>();
-            var readBuffer = new byte[1024];
-            var messageBuffer = new List<byte>();
-
-            int bytesRead;
-            while ((bytesRead = await stream.ReadAsync(readBuffer.AsMemory(0, readBuffer.Length), ct)) != 0)
-            {
-                messageBuffer.AddRange(readBuffer.AsSpan(0, bytesRead).ToArray());
-                int delimiterIndex;
-                while ((delimiterIndex = messageBuffer.IndexOf((byte)'\n')) != -1)
-                {
-                    var messageBytes = messageBuffer.Take(delimiterIndex).ToArray();
-                    messageBuffer.RemoveRange(0, delimiterIndex + 1);
-
-                    var requestLine = Encoding.UTF8.GetString(messageBytes).TrimEnd('\r');
-                    _logger.LogInformation("Received: {Request}", requestLine);
-
-                    var parts = requestLine.Split(' ', 2);
-                    var alias = parts[0];
-                    var args = parts.Length > 1 ? parts[1] : string.Empty;
-
-                    if (!_requestRegistry.TryCreateRequest(alias, args, out var request))
-                    {
-                        await stream.WriteAsync(Encoding.UTF8.GetBytes("Syntax Error.\n"), ct);
-                        continue;
-                    }
-
-                    await sender.Send(request, ct);
-                }
-            }
-        }
-        catch (Exception ex) when (ex is not OperationCanceledException)
-        {
-            _logger.LogError(ex, "Error handling connection for client {ClientId}.", mudClient.Id);
-        }
     }
     public Task HandleClient(TcpClient tcpClient, CancellationToken ct)
     {
@@ -101,6 +56,20 @@ public sealed class ClientConnectionHandler : IClientConnectionHandler
         if (!removed)
         {
             _logger.LogWarning("Client {ClientId} not found.", clientId);
+        }
+    }
+    private async Task HandleConnectionAsync(MudClient mudClient, CancellationToken ct)
+    {
+        try
+        {
+            var stream = mudClient.GetStream();
+            using var scope = _serviceScopeFactory.CreateScope();
+            var requestProcessor = scope.ServiceProvider.GetRequiredService<ClientRequestProcessor>();
+            await requestProcessor.ProcessRequestsAsync(stream, ct);
+        }
+        catch (Exception ex) when (ex is not OperationCanceledException)
+        {
+            _logger.LogError(ex, "Error handling connection for client {ClientId}.", mudClient.Id);
         }
     }
 }
