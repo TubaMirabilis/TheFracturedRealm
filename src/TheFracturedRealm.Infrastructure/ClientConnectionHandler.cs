@@ -64,7 +64,7 @@ public sealed class ClientConnectionHandler : IClientConnectionHandler
         {
             var stream = mudClient.GetStream();
             using var scope = _serviceScopeFactory.CreateScope();
-            var requestProcessor = scope.ServiceProvider.GetRequiredService<ClientRequestProcessor>();
+            var requestProcessor = scope.ServiceProvider.GetRequiredService<IClientRequestProcessor>();
             await requestProcessor.ProcessRequestsAsync(stream, ct);
         }
         catch (Exception ex) when (ex is not OperationCanceledException)
