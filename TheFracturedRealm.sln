@@ -13,6 +13,12 @@ Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Applicati
 EndProject
 Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Infrastructure", "src\TheFracturedRealm.Infrastructure\TheFracturedRealm.Infrastructure.csproj", "{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}"
 EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "tests", "tests", "{F01BEBD0-CECF-4D24-A92B-48D8955A9289}"
+EndProject
+Project("{2150E333-8FDC-42A3-9474-1A3956D46DE8}") = "AcceptanceTests", "AcceptanceTests", "{491FCF6C-5813-49D2-B326-3C87163E5846}"
+EndProject
+Project("{FAE04EC0-301F-11D3-BF4B-00C04F79EFBC}") = "TheFracturedRealm.Server.AcceptanceTests", "tests\AcceptanceTests\TheFracturedRealm.Server.AcceptanceTests\TheFracturedRealm.Server.AcceptanceTests.csproj", "{AE4012B2-43C9-4628-9320-CA61E98152A3}"
+EndProject
 Global
 	GlobalSection(SolutionConfigurationPlatforms) = preSolution
 		Debug|Any CPU = Debug|Any CPU
@@ -38,11 +44,17 @@ Global
 		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Debug|Any CPU.Build.0 = Debug|Any CPU
 		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Release|Any CPU.ActiveCfg = Release|Any CPU
 		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5}.Release|Any CPU.Build.0 = Release|Any CPU
+		{AE4012B2-43C9-4628-9320-CA61E98152A3}.Debug|Any CPU.ActiveCfg = Debug|Any CPU
+		{AE4012B2-43C9-4628-9320-CA61E98152A3}.Debug|Any CPU.Build.0 = Debug|Any CPU
+		{AE4012B2-43C9-4628-9320-CA61E98152A3}.Release|Any CPU.ActiveCfg = Release|Any CPU
+		{AE4012B2-43C9-4628-9320-CA61E98152A3}.Release|Any CPU.Build.0 = Release|Any CPU
 	EndGlobalSection
 	GlobalSection(NestedProjects) = preSolution
 		{BA37D8D2-3B92-411D-86C2-FB93FEAFB4D2} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
 		{77B39928-980F-4DEA-B725-270562E15ED0} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
 		{D1F989BA-FB11-42F4-9BE6-9E06449050A4} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
 		{45CAF9C9-8A58-46EF-A909-A395AC1F5CD5} = {8130CA3B-8DA2-4606-95E0-7DAEB8401F96}
+		{491FCF6C-5813-49D2-B326-3C87163E5846} = {F01BEBD0-CECF-4D24-A92B-48D8955A9289}
+		{AE4012B2-43C9-4628-9320-CA61E98152A3} = {491FCF6C-5813-49D2-B326-3C87163E5846}
 	EndGlobalSection
 EndGlobal
