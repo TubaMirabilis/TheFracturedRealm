@@ -23,4 +23,5 @@ public sealed class CommandDispatcher
         await Fallback.ExecuteAsync(new CommandContext(msg, world), line, ct);
         return true;
     }
+    public IEnumerable<ICommand> Commands => _cmds;
 }
