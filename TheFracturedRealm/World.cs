@@ -8,7 +8,7 @@ public sealed class World
     private readonly ConcurrentDictionary<Guid, Session> _sessions = new();
     private readonly ILogger<World> _log;
     public World(ILogger<World> log) => _log = log;
-    public IReadOnlyCollection<Session> Sessions => _sessions.Values.ToList().AsReadOnly();
+    public Session[] SnapshotSessions() => _sessions.Values.ToArray();
     public bool Add(Session s) => _sessions.TryAdd(s.Id, s);
     public bool Remove(Session s) => _sessions.TryRemove(s.Id, out _);
     public void Broadcast(string line, Session? except = null)

@@ -22,7 +22,7 @@ public sealed class NameCommand : ICommand
             await ctx.Reply($"{Ansi.Red}That name is not valid.{Ansi.Reset}", ct);
             return;
         }
-        if (ctx.World.Sessions.Any(s => !ReferenceEquals(s, ctx.Session) &&
+        if (ctx.World.SnapshotSessions().Any(s => !ReferenceEquals(s, ctx.Session) &&
             !string.IsNullOrWhiteSpace(s.Name) &&
             string.Equals(s.Name, proposed, StringComparison.OrdinalIgnoreCase)))
         {

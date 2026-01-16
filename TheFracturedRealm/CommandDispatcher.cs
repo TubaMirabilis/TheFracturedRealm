@@ -5,19 +5,22 @@ namespace TheFracturedRealm;
 public sealed class CommandDispatcher
 {
     private readonly List<ICommand> _cmds = new();
+    public ICommand? Fallback { get; set; }
     public void Register(ICommand cmd) => _cmds.Add(cmd);
     public async Task<bool> TryDispatchAsync(InboundMessage msg, World world, CancellationToken ct)
     {
         var line = msg.Line;
-        foreach (var cmd in _cmds)
+        var cmd = _cmds.FirstOrDefault(c => c.Matches(line));
+        if (cmd is not null)
         {
-            if (cmd.Matches(line))
-            {
-                await cmd.ExecuteAsync(new CommandContext(msg, world), line, ct);
-                return true;
-            }
+            await cmd.ExecuteAsync(new CommandContext(msg, world), line, ct);
+            return true;
         }
-        return false;
+        if (Fallback is null)
+        {
+            return false;
+        }
+        await Fallback.ExecuteAsync(new CommandContext(msg, world), line, ct);
+        return true;
     }
-    public IEnumerable<ICommand> Commands => _cmds;
 }

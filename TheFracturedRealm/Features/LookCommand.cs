@@ -16,7 +16,7 @@ public sealed class LookCommand : ICommand
         sb.AppendLine("Faint echoes hint at places not yet built.");
         sb.AppendLine();
         sb.AppendLine($"{Ansi.Underline}Also here:{Ansi.Reset}");
-        var others = ctx.World.Sessions
+        var others = ctx.World.SnapshotSessions()
             .Where(s => s.Id != ctx.Session.Id)
             .Select(s => string.IsNullOrWhiteSpace(s.Name) ? s.ToString() : s.Name!)
             .DefaultIfEmpty("(no one)");

@@ -17,21 +17,29 @@ public sealed class GameLoopService : BackgroundService
         _inbound = inbound;
         _world = world;
         _dispatcher.Register(new NameCommand());
-        _dispatcher.Register(new SayCommand());
         _dispatcher.Register(new LookCommand());
         _dispatcher.Register(new WhoCommand());
         _dispatcher.Register(new HelpCommand(_dispatcher));
+        var say = new SayCommand();
+        _dispatcher.Register(say);
+        _dispatcher.Fallback = say;
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
-        var tick = new PeriodicTimer(TimeSpan.FromMilliseconds(100));
-        while (!stoppingToken.IsCancellationRequested)
+        try
         {
-            while (_inbound.Reader.TryRead(out var inbound))
+            var reader = _inbound.Reader;
+            while (await reader.WaitToReadAsync(stoppingToken))
             {
-                await HandleInbound(inbound, stoppingToken);
+                while (reader.TryRead(out var inbound))
+                {
+                    await HandleInbound(inbound, stoppingToken);
+                }
             }
-            await tick.WaitForNextTickAsync(stoppingToken);
+        }
+        catch (OperationCanceledException) when (stoppingToken.IsCancellationRequested)
+        {
+            _log.LogInformation("Game loop stopping");
         }
     }
     private async Task HandleInbound(InboundMessage msg, CancellationToken ct)
@@ -45,8 +53,7 @@ public sealed class GameLoopService : BackgroundService
                     await Tell(msg.Session, $"Please set your handle with: {Ansi.Yellow}name <yourname>{Ansi.Reset}");
                     return;
                 }
-                var say = new SayCommand();
-                await say.ExecuteAsync(new CommandContext(msg, _world), msg.Line, ct);
+                await _dispatcher.TryDispatchAsync(msg, _world, ct);
             }
         }
         catch (Exception ex)

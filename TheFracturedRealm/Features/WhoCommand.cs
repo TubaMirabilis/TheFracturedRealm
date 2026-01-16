@@ -9,7 +9,7 @@ public sealed class WhoCommand : ICommand
     public string Summary => "List connected players.";
     public async Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct)
     {
-        var list = ctx.World.Sessions
+        var list = ctx.World.SnapshotSessions()
             .Select(s => string.IsNullOrWhiteSpace(s.Name) ? s.ToString() : s.Name!)
             .OrderBy(n => n, StringComparer.OrdinalIgnoreCase)
             .ToArray();
