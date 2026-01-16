@@ -46,14 +46,10 @@ public sealed class GameLoopService : BackgroundService
     {
         try
         {
-            if (!await _dispatcher.TryDispatchAsync(msg, _world, ct))
+            if (!await _dispatcher.TryDispatchAsync(msg, _world, ct) && !IsNamed(msg.Session))
             {
-                if (!IsNamed(msg.Session))
-                {
-                    await Tell(msg.Session, $"Please set your handle with: {Ansi.Yellow}name <yourname>{Ansi.Reset}");
-                    return;
-                }
-                await _dispatcher.TryDispatchAsync(msg, _world, ct);
+                await Tell(msg.Session, $"Please set your handle with: {Ansi.Yellow}name <yourname>{Ansi.Reset}");
+                return;
             }
         }
         catch (Exception ex)
