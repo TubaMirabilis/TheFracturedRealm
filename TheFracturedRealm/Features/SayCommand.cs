@@ -8,7 +8,7 @@ internal sealed class SayCommand : ICommand
     public string[] Aliases => ["'", "s"];
     public string Usage => "say <message>";
     public string Summary => "Speak to everyone in the room.";
-    public bool Matches(string line)
+    bool ICommand.Matches(string line)
     {
         if (string.IsNullOrWhiteSpace(line))
         {
@@ -18,7 +18,12 @@ internal sealed class SayCommand : ICommand
         {
             return true;
         }
-        return ((ICommand)this).Matches(line);
+        var verb = ICommand.ExtractVerb(line);
+        if (verb.Equals(Name, StringComparison.OrdinalIgnoreCase))
+        {
+            return true;
+        }
+        return Aliases.Any(a => verb.Equals(a, StringComparison.OrdinalIgnoreCase));
     }
     public async Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct)
     {
