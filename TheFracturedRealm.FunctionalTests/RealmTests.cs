@@ -21,4 +21,21 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         welcome.ShouldContain("Welcome to The Fractured Realm!", Case.Insensitive);
         prompt.ShouldContain("Your handle? Type:", Case.Insensitive);
     }
+
+    [Fact, TestPriority(1)]
+    public async Task CanSetPlayerName()
+    {
+        // Arrange
+        await using var c = new RealmClient();
+        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type: name <yourname>", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+
+        // Act
+        await c.SendLineAsync("name Alice", TestContext.Current.CancellationToken);
+        var response = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome, Alice!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        var plain = Sanitizer.StripAnsi(response);
+
+        // Assert
+        plain.ShouldContain("Welcome, Alice! Type help to get started.", Case.Insensitive);
+    }
 }
