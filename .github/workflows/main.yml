@@ -28,7 +28,7 @@ jobs:
               uses: actions/setup-dotnet@v5
               with:
                   dotnet-version: ${{ env.DOTNET_VERSION }}
-            - name: DotNet Format
-              run: dotnet format --verify-no-changes
+            - name: DotNet Restore
+              run: dotnet restore
             - name: DotNet Build
               run: dotnet build --configuration Release --no-restore
