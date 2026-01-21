@@ -6,6 +6,8 @@ namespace TheFracturedRealm.FunctionalTests;
 
 public sealed class RealmClient : IAsyncDisposable
 {
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(2);
+    public static readonly StringComparison DefaultComparison = StringComparison.OrdinalIgnoreCase;
     private readonly TcpClient _client;
     private readonly NetworkStream _stream;
     private readonly StreamReader _reader;
@@ -165,5 +167,29 @@ public sealed class RealmClient : IAsyncDisposable
         static string Plain(string s) => Sanitizer.StripAnsi(s);
         var predicates = containsInOrder.Select(expected => (Func<string, bool>)(line => Plain(line).Contains(expected, StringComparison.OrdinalIgnoreCase))).ToArray();
         return WaitForLinesAsync(predicates, timeout, allowInterleaving: true);
+    }
+    public static Func<string, bool> ContainsPredicate(string expected, StringComparison comparison = default)
+    {
+        comparison = comparison == default ? DefaultComparison : comparison;
+        return line => Sanitizer.StripAnsi(line).Contains(expected, comparison);
+    }
+    public Task<string> WaitForContainsAsync(string expected, TimeSpan? timeout = null, StringComparison comparison = default) => WaitForLineAsync(ContainsPredicate(expected, comparison), timeout ?? DefaultTimeout);
+    public async Task<string> SendAndWaitAsync(string command, string expectedResponse, CancellationToken ct, TimeSpan? timeout = null)
+    {
+        await SendLineAsync(command, ct);
+        return await WaitForContainsAsync(expectedResponse, timeout);
+    }
+    public static async Task<RealmClient> ConnectAtPromptAsync(string host = "127.0.0.1", int port = 4000)
+    {
+        var client = new RealmClient(host, port);
+        await client.WaitForContainsAsync("Welcome to The Fractured Realm!");
+        await client.WaitForContainsAsync("Your handle? Type: name <yourname>");
+        return client;
+    }
+    public static async Task<RealmClient> ConnectAndNameAsync(string name, string host = "127.0.0.1", int port = 4000, CancellationToken ct = default)
+    {
+        var client = await ConnectAtPromptAsync(host, port);
+        await client.SendAndWaitAsync($"name {name}", $"Welcome, {name}!", ct);
+        return client;
     }
 }

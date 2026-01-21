@@ -7,6 +7,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
 {
     private readonly RealmHostFixture _fixture;
     public RealmTests(RealmHostFixture fixture) => _fixture = fixture;
+
     [Fact, TestPriority(0)]
     public async Task ConnectReceivesWelcomeAndHandlePrompt()
     {
@@ -14,63 +15,49 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         await using var c = new RealmClient();
 
         // Act
-        var lines = await c.ExpectAsync(TimeSpan.FromSeconds(2), "Welcome to The Fractured Realm!", "Your handle? Type:");
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "Welcome to The Fractured Realm!", "Your handle? Type:");
 
         // Assert
-        Sanitizer.StripAnsi(lines[0]).ShouldContain("Welcome to The Fractured Realm!", Case.Insensitive);
-        Sanitizer.StripAnsi(lines[1]).ShouldContain("Your handle? Type:", Case.Insensitive);
+        lines[0].ShouldContainWithoutAnsi("Welcome to The Fractured Realm!");
+        lines[1].ShouldContainWithoutAnsi("Your handle? Type:");
     }
 
     [Fact, TestPriority(1)]
     public async Task CannotSayBeforeNaming()
     {
         // Arrange
-        await using var c = new RealmClient();
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type: name <yourname>", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        await using var c = await RealmClient.ConnectAtPromptAsync();
 
         // Act
-        await c.SendLineAsync("say Hello everyone!", TestContext.Current.CancellationToken);
-        var response = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Set your handle first:", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        var plain = Sanitizer.StripAnsi(response);
+        var response = await c.SendAndWaitAsync("say Hello everyone!", "Set your handle first:", TestContext.Current.CancellationToken);
 
         // Assert
-        plain.ShouldContain("Set your handle first: name <yourname>", Case.Insensitive);
+        response.ShouldContainWithoutAnsi("Set your handle first: name <yourname>");
     }
 
     [Fact, TestPriority(2)]
     public async Task CanSetPlayerName()
     {
         // Arrange
-        await using var c = new RealmClient();
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type: name <yourname>", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        await using var c = await RealmClient.ConnectAtPromptAsync();
 
         // Act
-        await c.SendLineAsync("name Alice", TestContext.Current.CancellationToken);
-        var response = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome, Alice!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        var plain = Sanitizer.StripAnsi(response);
+        var response = await c.SendAndWaitAsync("name Alice", "Welcome, Alice!", TestContext.Current.CancellationToken);
 
         // Assert
-        plain.ShouldContain("Welcome, Alice! Type help to get started.", Case.Insensitive);
+        response.ShouldContainWithoutAnsi("Welcome, Alice! Type help to get started.");
     }
 
     [Fact, TestPriority(3)]
     public async Task CanSayAfterNaming()
     {
         // Arrange
-        await using var c = new RealmClient();
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type: name <yourname>", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        await c.SendLineAsync("name Bob", TestContext.Current.CancellationToken);
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome, Bob!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        await using var c = await RealmClient.ConnectAndNameAsync("Bob", ct: TestContext.Current.CancellationToken);
 
         // Act
-        await c.SendLineAsync("say Hello everyone!", TestContext.Current.CancellationToken);
-        var response = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("You say: Hello everyone!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        var plain = Sanitizer.StripAnsi(response);
+        var response = await c.SendAndWaitAsync("say Hello everyone!", "You say: Hello everyone!", TestContext.Current.CancellationToken);
 
         // Assert
-        plain.ShouldContain("You say: Hello everyone!", Case.Insensitive);
+        response.ShouldContainWithoutAnsi("You say: Hello everyone!");
     }
 }
