@@ -22,7 +22,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         prompt.ShouldContain("Your handle? Type:", Case.Insensitive);
     }
 
-    [Fact, TestPriority(1)]
+    [Fact, TestPriority(2)]
     public async Task CanSetPlayerName()
     {
         // Arrange
@@ -37,5 +37,24 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
 
         // Assert
         plain.ShouldContain("Welcome, Alice! Type help to get started.", Case.Insensitive);
+    }
+
+    [Fact, TestPriority(3)]
+    public async Task CanSayAfterNaming()
+    {
+        // Arrange
+        await using var c = new RealmClient();
+        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type: name <yourname>", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        await c.SendLineAsync("name Bob", TestContext.Current.CancellationToken);
+        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome, Bob!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+
+        // Act
+        await c.SendLineAsync("say Hello everyone!", TestContext.Current.CancellationToken);
+        var response = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("You say: Hello everyone!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        var plain = Sanitizer.StripAnsi(response);
+
+        // Assert
+        plain.ShouldContain("You say: Hello everyone!", Case.Insensitive);
     }
 }
