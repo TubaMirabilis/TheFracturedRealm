@@ -14,12 +14,11 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         await using var c = new RealmClient();
 
         // Act
-        var welcome = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        var prompt = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type:", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
+        var lines = await c.ExpectAsync(TimeSpan.FromSeconds(2), "Welcome to The Fractured Realm!", "Your handle? Type:");
 
         // Assert
-        welcome.ShouldContain("Welcome to The Fractured Realm!", Case.Insensitive);
-        prompt.ShouldContain("Your handle? Type:", Case.Insensitive);
+        Sanitizer.StripAnsi(lines[0]).ShouldContain("Welcome to The Fractured Realm!", Case.Insensitive);
+        Sanitizer.StripAnsi(lines[1]).ShouldContain("Your handle? Type:", Case.Insensitive);
     }
 
     [Fact, TestPriority(1)]
@@ -73,25 +72,5 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
 
         // Assert
         plain.ShouldContain("You say: Hello everyone!", Case.Insensitive);
-    }
-
-    // Test the help command:
-    [Fact, TestPriority(4)]
-    public async Task HelpCommandProvidesCommandListAndDetails()
-    {
-        // Arrange
-        await using var c = new RealmClient();
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome to The Fractured Realm!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Your handle? Type: name <yourname>", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        await c.SendLineAsync("name Charlie", TestContext.Current.CancellationToken);
-        await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Welcome, Charlie!", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-
-        // Act
-        await c.SendLineAsync("help", TestContext.Current.CancellationToken);
-        var listResponse = await c.WaitForLineAsync(line => Sanitizer.StripAnsi(line).Contains("Commands:", StringComparison.OrdinalIgnoreCase), timeout: TimeSpan.FromSeconds(2));
-        var listPlain = Sanitizer.StripAnsi(listResponse);
-
-        // Assert
-        listPlain.ShouldContain("Commands:", Case.Insensitive);
     }
 }

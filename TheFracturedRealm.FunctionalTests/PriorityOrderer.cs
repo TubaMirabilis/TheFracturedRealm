@@ -4,43 +4,27 @@ using Xunit.v3;
 
 namespace TheFracturedRealm.FunctionalTests;
 
-public class PriorityOrderer : ITestCaseOrderer
+public sealed class PriorityOrderer : ITestCaseOrderer
 {
-    private static List<IXunitTestCase> GetOrCreate(SortedDictionary<int, List<IXunitTestCase>> dictionary, int key)
+    public IReadOnlyCollection<TTestCase> OrderTestCases<TTestCase>(IReadOnlyCollection<TTestCase> testCases) where TTestCase : ITestCase
     {
-        if (dictionary.TryGetValue(key, out var result))
-        {
-            return result;
-        }
-        result = [];
-        dictionary[key] = result;
-        return result;
-    }
-
-    public IReadOnlyCollection<TTestCase> OrderTestCases<TTestCase>(IReadOnlyCollection<TTestCase> testCases)
-        where TTestCase : ITestCase
-    {
-        var result = new List<TTestCase>();
-        var sortedMethods = new SortedDictionary<int, List<IXunitTestCase>>();
+        var buckets = new SortedDictionary<int, List<IXunitTestCase>>();
         foreach (var testCase in testCases.OfType<IXunitTestCase>())
         {
-            var priority = 0;
-            var attr = testCase.TestMethod.Method.GetCustomAttributes<TestPriorityAttribute>().FirstOrDefault();
-            if (attr is not null)
+            var priority = testCase.TestMethod.Method.GetCustomAttributes<TestPriorityAttribute>().FirstOrDefault()?.Priority ?? 0;
+            if (!buckets.TryGetValue(priority, out var list))
             {
-                priority = attr.Priority;
+                buckets[priority] = list = [];
             }
-            GetOrCreate(sortedMethods, priority).Add(testCase);
+            list.Add(testCase);
         }
-        foreach (var list in sortedMethods.Keys.Select(priority => sortedMethods[priority]))
+        var result = new List<TTestCase>(testCases.Count);
+        foreach (var list in buckets.Values)
         {
             list.Sort((x, y) => StringComparer.OrdinalIgnoreCase.Compare(x.TestMethod.Method.Name, y.TestMethod.Method.Name));
-            foreach (var testCase in list)
+            foreach (var tc in list.OfType<TTestCase>())
             {
-                if (testCase is TTestCase tTestCase)
-                {
-                    result.Add(tTestCase);
-                }
+                result.Add(tc);
             }
         }
         return result;
