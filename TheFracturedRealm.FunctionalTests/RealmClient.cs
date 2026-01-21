@@ -44,9 +44,12 @@ public sealed class RealmClient : IAsyncDisposable
                 try
                 {
                     line = await _reader.ReadLineAsync(_cts.Token);
+                    if (line is null)
+                    {
+                        break;
+                    }
                     lock (_recentLock)
                     {
-                        ArgumentNullException.ThrowIfNull(line);
                         _recent.Enqueue(line);
                         while (_recent.Count > _logCapacity)
                         {
@@ -55,10 +58,6 @@ public sealed class RealmClient : IAsyncDisposable
                     }
                 }
                 catch (OperationCanceledException) when (_cts.IsCancellationRequested)
-                {
-                    break;
-                }
-                if (line is null)
                 {
                     break;
                 }
