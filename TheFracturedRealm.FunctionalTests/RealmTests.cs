@@ -60,4 +60,81 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         // Assert
         response.ShouldContainWithoutAnsi("You say: Hello everyone!");
     }
+
+    [Fact, TestPriority(4)]
+    public async Task HelpCommandShowsGeneralHelpListing()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("TestUser", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        await c.SendLineAsync("help", TestContext.Current.CancellationToken);
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "Commands:", "help", "look", "name", "say", "who", "Try: help");
+
+        // Assert
+        lines[0].ShouldContainWithoutAnsi("Commands:");
+        var commandSection = string.Join("\n", lines);
+        commandSection.ShouldContainWithoutAnsi("help");
+        commandSection.ShouldContainWithoutAnsi("look");
+        commandSection.ShouldContainWithoutAnsi("name");
+        commandSection.ShouldContainWithoutAnsi("say");
+        commandSection.ShouldContainWithoutAnsi("who");
+        lines[^1].ShouldContainWithoutAnsi("Try: help");
+    }
+
+    [Fact, TestPriority(5)]
+    public async Task HelpCommandShowsCommandsInAlphabeticalOrder()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("TestUser", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        await c.SendLineAsync("help", TestContext.Current.CancellationToken);
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "Commands:", "help", "look", "name", "say", "who");
+
+        // Assert - verify alphabetical ordering by checking that commands appear in sequence
+        var fullOutput = string.Join("\n", lines.Select(Sanitizer.StripAnsi));
+        var helpIndex = fullOutput.IndexOf("help - ", StringComparison.OrdinalIgnoreCase);
+        var lookIndex = fullOutput.IndexOf("look - ", StringComparison.OrdinalIgnoreCase);
+        var nameIndex = fullOutput.IndexOf("name - ", StringComparison.OrdinalIgnoreCase);
+        var sayIndex = fullOutput.IndexOf("say - ", StringComparison.OrdinalIgnoreCase);
+        var whoIndex = fullOutput.IndexOf("who - ", StringComparison.OrdinalIgnoreCase);
+
+        helpIndex.ShouldBeGreaterThan(-1);
+        lookIndex.ShouldBeGreaterThan(helpIndex);
+        nameIndex.ShouldBeGreaterThan(lookIndex);
+        sayIndex.ShouldBeGreaterThan(nameIndex);
+        whoIndex.ShouldBeGreaterThan(sayIndex);
+    }
+
+    [Fact, TestPriority(6)]
+    public async Task HelpCommandShowsCommandSpecificHelp()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("TestUser", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        await c.SendLineAsync("help say", TestContext.Current.CancellationToken);
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "say", "Speak to everyone", "Usage:");
+
+        // Assert
+        var fullOutput = string.Join("\n", lines);
+        fullOutput.ShouldContainWithoutAnsi("say");
+        fullOutput.ShouldContainWithoutAnsi("Speak to everyone in the room");
+        fullOutput.ShouldContainWithoutAnsi("Usage:");
+        fullOutput.ShouldContainWithoutAnsi("say <message>");
+    }
+
+    [Fact, TestPriority(7)]
+    public async Task HelpCommandShowsErrorForInvalidCommand()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("TestUser", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        var response = await c.SendAndWaitAsync("help invalidcommand", "No help for", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("No help for 'invalidcommand'");
+    }
 }
