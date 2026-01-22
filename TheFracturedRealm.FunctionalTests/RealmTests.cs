@@ -129,7 +129,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
 
         // Act
         await c.SendLineAsync("help say", TestContext.Current.CancellationToken);
-        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "say", "Speak to everyone", "Usage:");
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "say", "Speak to everyone in the room", "Usage:");
 
         // Assert
         var fullOutput = string.Join("\n", lines);
