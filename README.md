@@ -23,6 +23,7 @@ If you type something that doesn’t match a command, it falls back to `say`.
 
 ## Requirements
 
+- ncat (choco install nmap)
 - .NET SDK capable of building **`net10.0`** (see `TheFracturedRealm.csproj`)
 
 ## Run locally
@@ -37,16 +38,10 @@ You should see a log line indicating the server is listening on port 4000.
 
 ## Connect to the server
 
-From another terminal/machine:
+From another terminal:
 
 ```bash
-telnet localhost 4000
-```
-
-Or with netcat:
-
-```bash
-nc localhost 4000
+ncat localhost 4000
 ```
 
 You’ll get a welcome message and be prompted to set a handle:
