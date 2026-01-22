@@ -177,4 +177,22 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         // Assert
         response.ShouldContainWithoutAnsi("No help for 'invalidcommand'");
     }
+
+    [Fact, TestPriority(11)]
+    public async Task LookCommandShowsRoomDescriptionAndOtherPlayers()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("TestUser", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        await c.SendLineAsync("look", TestContext.Current.CancellationToken);
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "You are in a quiet, featureless void.", "Faint echoes hint at places not yet built.", "Also here:", "(no one)");
+
+        // Assert
+        var fullOutput = string.Join("\n", lines);
+        fullOutput.ShouldContainWithoutAnsi("You are in a quiet, featureless void.");
+        fullOutput.ShouldContainWithoutAnsi("Faint echoes hint at places not yet built.");
+        fullOutput.ShouldContainWithoutAnsi("Also here:");
+        fullOutput.ShouldContainWithoutAnsi("(no one)");
+    }
 }
