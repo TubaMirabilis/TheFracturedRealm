@@ -76,6 +76,32 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
     }
 
     [Fact, TestPriority(5)]
+    public async Task CanSayWithLeadingApostropheAfterNaming()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("Bob", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        var response = await c.SendAndWaitAsync("'Hello everyone!", "You say: Hello everyone!", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("You say: Hello everyone!");
+    }
+
+    [Fact, TestPriority(6)]
+    public async Task CanSayWithoutLeadingApostropheAfterNaming()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("Bob", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        var response = await c.SendAndWaitAsync("Hello everyone!", "You say: Hello everyone!", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("You say: Hello everyone!");
+    }
+
+    [Fact, TestPriority(7)]
     public async Task HelpCommandShowsGeneralHelpListing()
     {
         // Arrange
@@ -96,7 +122,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         lines[^1].ShouldContainWithoutAnsi("Try: help");
     }
 
-    [Fact, TestPriority(6)]
+    [Fact, TestPriority(8)]
     public async Task HelpCommandShowsCommandsInAlphabeticalOrder()
     {
         // Arrange
@@ -121,7 +147,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         whoIndex.ShouldBeGreaterThan(sayIndex);
     }
 
-    [Fact, TestPriority(7)]
+    [Fact, TestPriority(9)]
     public async Task HelpCommandShowsCommandSpecificHelp()
     {
         // Arrange
@@ -139,7 +165,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi("say <message>");
     }
 
-    [Fact, TestPriority(8)]
+    [Fact, TestPriority(10)]
     public async Task HelpCommandShowsErrorForInvalidCommand()
     {
         // Arrange
