@@ -9,17 +9,17 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
     public RealmTests(RealmHostFixture fixture) => _fixture = fixture;
 
     [Fact, TestPriority(0)]
-    public async Task ConnectReceivesWelcomeAndHandlePrompt()
+    public async Task OnConnectShowsWelcomeAndAsksForHandle()
     {
         // Arrange
         await using var c = new RealmClient();
 
         // Act
-        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "Welcome to The Fractured Realm!", "Your handle? Type:");
+        var lines = await c.ExpectAsync(RealmClient.DefaultTimeout, "Welcome to The Fractured Realm!", "Your handle? Type: name <yourname>");
 
         // Assert
         lines[0].ShouldContainWithoutAnsi("Welcome to The Fractured Realm!");
-        lines[1].ShouldContainWithoutAnsi("Your handle? Type:");
+        lines[1].ShouldContainWithoutAnsi("Your handle? Type: name <yourname>");
     }
 
     [Fact, TestPriority(1)]
@@ -29,26 +29,40 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         await using var c = await RealmClient.ConnectAtPromptAsync();
 
         // Act
-        var response = await c.SendAndWaitAsync("say Hello everyone!", "Set your handle first:", TestContext.Current.CancellationToken);
+        var response = await c.SendAndWaitAsync("say Hello everyone!", "Set your handle first: name <yourname>", TestContext.Current.CancellationToken);
 
         // Assert
         response.ShouldContainWithoutAnsi("Set your handle first: name <yourname>");
     }
 
     [Fact, TestPriority(2)]
-    public async Task CanSetPlayerName()
+    public async Task NameCommandSetsHandleAndShowsGettingStartedHint()
     {
         // Arrange
         await using var c = await RealmClient.ConnectAtPromptAsync();
 
         // Act
-        var response = await c.SendAndWaitAsync("name Alice", "Welcome, Alice!", TestContext.Current.CancellationToken);
+        var response = await c.SendAndWaitAsync("name Alice", "Welcome, Alice! Type help to get started.", TestContext.Current.CancellationToken);
 
         // Assert
         response.ShouldContainWithoutAnsi("Welcome, Alice! Type help to get started.");
     }
 
+    // Names cannot be longer than 20 characters
     [Fact, TestPriority(3)]
+    public async Task NameCommandRejectsNamesThatAreTooLong()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAtPromptAsync();
+
+        // Act
+        var response = await c.SendAndWaitAsync("name ThisNameIsWayTooLongToBeValid", "That name is a bit long (max 20).", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("That name is a bit long (max 20).");
+    }
+
+    [Fact, TestPriority(4)]
     public async Task CanSayAfterNaming()
     {
         // Arrange
@@ -61,7 +75,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("You say: Hello everyone!");
     }
 
-    [Fact, TestPriority(4)]
+    [Fact, TestPriority(5)]
     public async Task HelpCommandShowsGeneralHelpListing()
     {
         // Arrange
@@ -82,7 +96,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         lines[^1].ShouldContainWithoutAnsi("Try: help");
     }
 
-    [Fact, TestPriority(5)]
+    [Fact, TestPriority(6)]
     public async Task HelpCommandShowsCommandsInAlphabeticalOrder()
     {
         // Arrange
@@ -107,7 +121,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         whoIndex.ShouldBeGreaterThan(sayIndex);
     }
 
-    [Fact, TestPriority(6)]
+    [Fact, TestPriority(7)]
     public async Task HelpCommandShowsCommandSpecificHelp()
     {
         // Arrange
@@ -125,7 +139,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi("say <message>");
     }
 
-    [Fact, TestPriority(7)]
+    [Fact, TestPriority(8)]
     public async Task HelpCommandShowsErrorForInvalidCommand()
     {
         // Arrange
