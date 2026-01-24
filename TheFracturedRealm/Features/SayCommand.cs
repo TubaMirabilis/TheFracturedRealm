@@ -49,7 +49,6 @@ internal sealed class SayCommand : ICommand
         {
             return string.Empty;
         }
-
         if (raw[0] == '\'')
         {
             return raw[1..].TrimStart();
