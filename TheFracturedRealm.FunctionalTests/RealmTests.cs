@@ -195,4 +195,22 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi("Also here:");
         fullOutput.ShouldContainWithoutAnsi("(no one)");
     }
+
+    [Fact, TestPriority(12)]
+    public async Task WhoCommandListsConnectedPlayers()
+    {
+        // Arrange
+        await using var c1 = await RealmClient.ConnectAndNameAsync("Alice", ct: TestContext.Current.CancellationToken);
+        await using var c2 = await RealmClient.ConnectAndNameAsync("Bob", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        await c1.SendLineAsync("who", TestContext.Current.CancellationToken);
+        var lines = await c1.ExpectAsync(RealmClient.DefaultTimeout, "Who:", " - Alice", " - Bob");
+
+        // Assert
+        var fullOutput = string.Join("\n", lines);
+        fullOutput.ShouldContainWithoutAnsi("Who:");
+        fullOutput.ShouldContainWithoutAnsi(" - Alice");
+        fullOutput.ShouldContainWithoutAnsi(" - Bob");
+    }
 }
