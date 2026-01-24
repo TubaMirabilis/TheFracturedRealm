@@ -19,10 +19,10 @@ internal sealed class GameLoopService : BackgroundService
         _dispatcher.Register(new NameCommand());
         _dispatcher.Register(new LookCommand());
         _dispatcher.Register(new WhoCommand());
-        _dispatcher.Register(new HelpCommand(_dispatcher));
         var say = new SayCommand();
         _dispatcher.Register(say);
         _dispatcher.Fallback = say;
+        _dispatcher.Register(new HelpCommand(() => _dispatcher.Commands));
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {
