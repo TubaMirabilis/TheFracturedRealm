@@ -11,16 +11,17 @@ internal sealed class CommandDispatcher
     {
         var line = msg.Line;
         var cmd = _cmds.FirstOrDefault(c => c.Matches(line));
+        var ctx = new CommandContext(msg, world);
         if (cmd is not null)
         {
-            await cmd.ExecuteAsync(new CommandContext(msg, world), line, ct);
+            await cmd.ExecuteAsync(ctx, line, ct);
             return true;
         }
         if (Fallback is null)
         {
             return false;
         }
-        await Fallback.ExecuteAsync(new CommandContext(msg, world), line, ct);
+        await Fallback.ExecuteAsync(ctx, line, ct);
         return true;
     }
     public IEnumerable<ICommand> Commands => _cmds;

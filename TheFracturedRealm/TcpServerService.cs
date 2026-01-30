@@ -75,7 +75,7 @@ internal sealed class TcpServerService : BackgroundService
         _world.Add(session);
         using var _ = client;
         using var stream = session.Stream;
-        var writerTask = WriterLoopAsync(session, ct);
+        var writerTask = WriterLoopAsync(session);
         session.EnqueueWelcomeMessages();
         _world.Broadcast($"{Ansi.Dim}* A new presence tingles at the edge of reality...{Ansi.Reset}", except: session);
         using var reader = new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
@@ -121,14 +121,14 @@ internal sealed class TcpServerService : BackgroundService
         await writerTask;
         _clientTasks.TryRemove(sessionId, out var _);
     }
-    private static async Task WriterLoopAsync(Session session, CancellationToken ct)
+    private static async Task WriterLoopAsync(Session session)
     {
         using var writer = new StreamWriter(session.Stream, new UTF8Encoding(false))
         {
             AutoFlush = true,
             NewLine = "\r\n"
         };
-        await foreach (var msg in session.OutboundReader.ReadAllAsync(ct))
+        await foreach (var msg in session.OutboundReader.ReadAllAsync())
         {
             try
             {
