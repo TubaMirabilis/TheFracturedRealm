@@ -1,3 +1,4 @@
+using System.Collections.Concurrent;
 using System.Net;
 using System.Net.Sockets;
 using System.Text;
@@ -13,6 +14,8 @@ internal sealed class TcpServerService : BackgroundService
     private readonly Channel<InboundMessage> _inbound;
     private readonly World _world;
     private readonly TcpListener _listener;
+    private readonly ConcurrentDictionary<Guid, Task> _clientTasks = new();
+    private readonly PeriodicTimer _pruneTimer = new(TimeSpan.FromMinutes(1));
     public TcpServerService(ILogger<TcpServerService> log, Channel<InboundMessage> inbound, World world)
     {
         _listener = new TcpListener(IPAddress.Any, 4000);
@@ -24,6 +27,7 @@ internal sealed class TcpServerService : BackgroundService
     {
         _listener.Start();
         _log.LogInformation("Listening on port 4000");
+        var pruneTask = PruneCompletedTasksAsync(stoppingToken);
         while (!stoppingToken.IsCancellationRequested)
         {
             TcpClient client;
@@ -37,12 +41,37 @@ internal sealed class TcpServerService : BackgroundService
             {
                 break;
             }
-            _ = HandleClientAsync(client, stoppingToken);
+            var sessionId = Guid.NewGuid();
+            var task = HandleClientAsync(client, sessionId, stoppingToken);
+            _clientTasks[sessionId] = task;
+        }
+        try
+        {
+            await pruneTask;
+        }
+        catch (OperationCanceledException)
+        {
+            _log.LogInformation("Prune task cancelled");
         }
     }
-    private async Task HandleClientAsync(TcpClient client, CancellationToken ct)
+    private async Task PruneCompletedTasksAsync(CancellationToken ct)
     {
-        var session = new Session(client);
+        while (await _pruneTimer.WaitForNextTickAsync(ct))
+        {
+            var completedKeys = _clientTasks.Where(kvp => kvp.Value.IsCompleted).Select(kvp => kvp.Key).ToList();
+            foreach (var key in completedKeys)
+            {
+                _clientTasks.TryRemove(key, out _);
+            }
+            if (completedKeys.Count > 0)
+            {
+                _log.LogDebug("Pruned {Count} completed client tasks", completedKeys.Count);
+            }
+        }
+    }
+    private async Task HandleClientAsync(TcpClient client, Guid sessionId, CancellationToken ct)
+    {
+        var session = new Session(client) { Id = sessionId };
         _world.Add(session);
         using var _ = client;
         using var stream = session.Stream;
@@ -78,6 +107,10 @@ internal sealed class TcpServerService : BackgroundService
         {
             _log.LogWarning("Stream disposed for {Session}", session);
         }
+        catch (SocketException)
+        {
+            _log.LogWarning("Socket error for {Session}", session);
+        }
         finally
         {
             _world.Remove(session);
@@ -86,6 +119,7 @@ internal sealed class TcpServerService : BackgroundService
             _log.LogInformation("Disconnected {Session}", session);
         }
         await writerTask;
+        _clientTasks.TryRemove(sessionId, out var _);
     }
     private static async Task WriterLoopAsync(Session session, CancellationToken ct)
     {
@@ -108,10 +142,34 @@ internal sealed class TcpServerService : BackgroundService
             }
         }
     }
+    public override async Task StopAsync(CancellationToken cancellationToken)
+    {
+        _listener.Stop();
+        _log.LogInformation("Waiting for {Count} active client connections to complete...", _clientTasks.Count);
+        _world.CloseAllSessions();
+        var activeTasks = _clientTasks.Values.ToArray();
+        if (activeTasks.Length > 0)
+        {
+            var timeout = Task.Delay(TimeSpan.FromSeconds(10), CancellationToken.None);
+            var allTasks = Task.WhenAll(activeTasks);
+            var completed = await Task.WhenAny(allTasks, timeout);
+            if (completed == timeout)
+            {
+                _log.LogWarning("Grace period elapsed. {Count} tasks still active. Proceeding with shutdown.", activeTasks.Count(t => !t.IsCompleted));
+            }
+            else
+            {
+                _log.LogInformation("All client connections completed gracefully.");
+            }
+        }
+        await base.StopAsync(cancellationToken);
+        await Task.Delay(TimeSpan.FromSeconds(1), cancellationToken);
+    }
     public override void Dispose()
     {
         _listener.Stop();
         _listener.Dispose();
+        _pruneTimer.Dispose();
         base.Dispose();
     }
 }

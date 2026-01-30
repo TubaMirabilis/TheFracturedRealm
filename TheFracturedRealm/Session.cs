@@ -7,7 +7,7 @@ namespace TheFracturedRealm;
 internal sealed class Session
 {
     private readonly Channel<OutboundMessage> _outbound;
-    public Guid Id { get; } = Guid.NewGuid();
+    public Guid Id { get; init; }
     public string? Name { get; set; }
     public TcpClient Client { get; }
     public NetworkStream Stream { get; }
@@ -31,6 +31,18 @@ internal sealed class Session
     {
         OutboundWriter.TryWrite(new OutboundMessage($"{Ansi.Green}Welcome to The Fractured Realm!{Ansi.Reset}"));
         OutboundWriter.TryWrite(new OutboundMessage($"Your handle? Type: {Ansi.Yellow}name <yourname>{Ansi.Reset}"));
+    }
+    public void Close()
+    {
+        try
+        {
+            OutboundWriter.TryComplete();
+            Client.Close();
+        }
+        catch
+        {
+            // Suppress exceptions during forceful closure
+        }
     }
     public override string ToString() => Name is { Length: > 0 } ? Name : $"#{Id.ToString()[..8]}";
 }

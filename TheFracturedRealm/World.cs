@@ -11,6 +11,22 @@ internal sealed class World
     public Session[] SnapshotSessions() => [.. _sessions.Values];
     public bool Add(Session s) => _sessions.TryAdd(s.Id, s);
     public bool Remove(Session s) => _sessions.TryRemove(s.Id, out _);
+    public void CloseAllSessions()
+    {
+        var sessions = SnapshotSessions();
+        _log.LogInformation("Forcefully closing {Count} active sessions", sessions.Length);
+        foreach (var session in sessions)
+        {
+            try
+            {
+                session.Close();
+            }
+            catch (Exception ex)
+            {
+                _log.LogWarning(ex, "Error closing session {Session}", session);
+            }
+        }
+    }
     public void Broadcast(string line, Session? except = null)
     {
         foreach (var session in _sessions.Values)
