@@ -47,7 +47,8 @@ internal sealed class TcpServerService : BackgroundService
         using var _ = client;
         using var stream = session.Stream;
         var writerTask = Task.Run(() => WriterLoopAsync(session, ct), ct);
-        await SendWelcomeAsync(session, ct);
+        session.EnqueueWelcomeMessages();
+        _world.Broadcast($"{Ansi.Dim}* A new presence tingles at the edge of reality...{Ansi.Reset}", except: session);
         using var reader = new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
         try
         {
@@ -103,17 +104,6 @@ internal sealed class TcpServerService : BackgroundService
                 break;
             }
         }
-    }
-    private async Task SendWelcomeAsync(Session s, CancellationToken ct)
-    {
-        if (ct.IsCancellationRequested)
-        {
-            return;
-        }
-        _ = s.OutboundWriter.TryWrite(new OutboundMessage($"{Ansi.Green}Welcome to The Fractured Realm!{Ansi.Reset}"));
-        _ = s.OutboundWriter.TryWrite(new OutboundMessage($"Your handle? Type: {Ansi.Yellow}name <yourname>{Ansi.Reset}"));
-        _world.Broadcast($"{Ansi.Dim}* A new presence tingles at the edge of reality...{Ansi.Reset}", except: s);
-        await Task.CompletedTask;
     }
     public override void Dispose()
     {

@@ -61,6 +61,14 @@ public sealed class RealmClient : IAsyncDisposable
                 {
                     break;
                 }
+                catch (ObjectDisposedException)
+                {
+                    break;
+                }
+                catch (IOException)
+                {
+                    break;
+                }
                 try
                 {
                     await _lines.Writer.WriteAsync(line, _cts.Token);

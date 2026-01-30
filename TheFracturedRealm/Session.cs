@@ -26,5 +26,10 @@ internal sealed class Session
         Stream = client.GetStream();
         RemoteEndPoint = client.Client.RemoteEndPoint;
     }
+    public void EnqueueWelcomeMessages()
+    {
+        OutboundWriter.TryWrite(new OutboundMessage($"{Ansi.Green}Welcome to The Fractured Realm!{Ansi.Reset}"));
+        OutboundWriter.TryWrite(new OutboundMessage($"Your handle? Type: {Ansi.Yellow}name <yourname>{Ansi.Reset}"));
+    }
     public override string ToString() => Name is { Length: > 0 } ? Name : $"#{Id.ToString()[..8]}";
 }
