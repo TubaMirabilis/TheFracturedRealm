@@ -19,7 +19,10 @@ internal sealed class World
             {
                 continue;
             }
-            _ = session.OutboundWriter.TryWrite(new OutboundMessage(line));
+            if (!session.OutboundWriter.TryWrite(new OutboundMessage(line)))
+            {
+                _log.LogWarning("Dropped broadcast message to {Session} (channel full)", session);
+            }
         }
     }
 }

@@ -12,10 +12,11 @@ public sealed class RealmHostFixture : IAsyncLifetime
     {
         Host = Microsoft.Extensions.Hosting.Host.CreateDefaultBuilder().ConfigureLogging(logging => logging.SetMinimumLevel(LogLevel.Warning)).ConfigureServices(services =>
         {
-            services.AddSingleton(Channel.CreateUnbounded<InboundMessage>(new UnboundedChannelOptions
+            services.AddSingleton(Channel.CreateBounded<InboundMessage>(new BoundedChannelOptions(2000)
             {
                 SingleReader = true,
-                SingleWriter = false
+                SingleWriter = false,
+                FullMode = BoundedChannelFullMode.DropOldest
             }));
             services.AddSingleton<World>();
             services.AddHostedService<TcpServerService>();

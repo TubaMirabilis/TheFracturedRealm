@@ -46,7 +46,7 @@ internal sealed class TcpServerService : BackgroundService
         _world.Add(session);
         using var _ = client;
         using var stream = session.Stream;
-        var writerTask = Task.Run(() => WriterLoopAsync(session, ct), ct);
+        var writerTask = WriterLoopAsync(session, ct);
         session.EnqueueWelcomeMessages();
         _world.Broadcast($"{Ansi.Dim}* A new presence tingles at the edge of reality...{Ansi.Reset}", except: session);
         using var reader = new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
@@ -64,7 +64,10 @@ internal sealed class TcpServerService : BackgroundService
                 {
                     continue;
                 }
-                await _inbound.Writer.WriteAsync(new InboundMessage(session, line), ct);
+                if (!_inbound.Writer.TryWrite(new InboundMessage(session, line)))
+                {
+                    _log.LogWarning("Dropped inbound message from {Session} (channel full)", session);
+                }
             }
         }
         catch (IOException)
