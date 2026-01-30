@@ -9,19 +9,19 @@ internal sealed class CommandDispatcher
     public void Register(ICommand cmd) => _cmds.Add(cmd);
     public async Task<bool> TryDispatchAsync(InboundMessage msg, World world, CancellationToken ct)
     {
-        var line = msg.Line;
-        var cmd = _cmds.FirstOrDefault(c => c.Matches(line));
+        var input = CommandInput.Parse(msg.Line);
+        var cmd = _cmds.FirstOrDefault(c => c.Matches(input));
         var ctx = new CommandContext(msg, world);
         if (cmd is not null)
         {
-            await cmd.ExecuteAsync(ctx, line, ct);
+            await cmd.ExecuteAsync(ctx, input, ct);
             return true;
         }
         if (Fallback is null)
         {
             return false;
         }
-        await Fallback.ExecuteAsync(ctx, line, ct);
+        await Fallback.ExecuteAsync(ctx, input, ct);
         return true;
     }
     public IEnumerable<ICommand> Commands => _cmds;

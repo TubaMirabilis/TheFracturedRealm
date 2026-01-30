@@ -10,7 +10,7 @@ internal sealed class LookCommand : ICommand
     public string[] Aliases => ["l"];
     public string Usage => "look";
     public string Summary => "Look around.";
-    public async Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct)
+    public async Task ExecuteAsync(CommandContext ctx, CommandInput input, CancellationToken ct)
     {
         var sb = new StringBuilder();
         sb.AppendLine(CultureInfo.InvariantCulture, $"{Ansi.Bold}You are in a quiet, featureless void.{Ansi.Reset}");

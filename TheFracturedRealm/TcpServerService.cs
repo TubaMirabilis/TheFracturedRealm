@@ -74,11 +74,10 @@ internal sealed class TcpServerService : BackgroundService
         var session = new Session(client) { Id = sessionId };
         _world.Add(session);
         using var _ = client;
-        using var stream = session.Stream;
         var writerTask = WriterLoopAsync(session);
         session.EnqueueWelcomeMessages();
         _world.Broadcast($"{Ansi.Dim}* A new presence tingles at the edge of reality...{Ansi.Reset}", except: session);
-        using var reader = new StreamReader(stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
+        using var reader = new StreamReader(session.Stream, new UTF8Encoding(false), detectEncodingFromByteOrderMarks: false, bufferSize: 4096, leaveOpen: true);
         try
         {
             while (!ct.IsCancellationRequested && client.Connected)

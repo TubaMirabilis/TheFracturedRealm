@@ -6,19 +6,14 @@ internal interface ICommand
     string[] Aliases => [];
     string Usage { get; }
     string Summary { get; }
-    bool Matches(string line)
+    bool Matches(CommandInput input)
     {
-        var verb = ExtractVerb(line);
+        var verb = input.Verb;
         if (verb.Equals(Name, StringComparison.OrdinalIgnoreCase))
         {
             return true;
         }
         return Aliases.Any(a => verb.Equals(a, StringComparison.OrdinalIgnoreCase));
     }
-    static string ExtractVerb(string line)
-    {
-        var i = line.IndexOf(' ', StringComparison.Ordinal);
-        return i < 0 ? line : line[..i];
-    }
-    Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct);
+    Task ExecuteAsync(CommandContext ctx, CommandInput input, CancellationToken ct);
 }

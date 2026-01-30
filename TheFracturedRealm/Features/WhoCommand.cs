@@ -7,7 +7,7 @@ internal sealed class WhoCommand : ICommand
     public string Name => "who";
     public string Usage => "who";
     public string Summary => "List connected players.";
-    public async Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct)
+    public async Task ExecuteAsync(CommandContext ctx, CommandInput input, CancellationToken ct)
     {
         var list = ctx.World.SnapshotSessions()
             .Select(s => string.IsNullOrWhiteSpace(s.Name) ? s.ToString() : s.Name!)

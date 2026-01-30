@@ -7,16 +7,15 @@ internal sealed class NameCommand : ICommand
     public string Name => "name";
     public string Usage => "name <yourname>";
     public string Summary => "Set your displayed handle.";
-    public async Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct)
+    public async Task ExecuteAsync(CommandContext ctx, CommandInput input, CancellationToken ct)
     {
-        var parts = raw.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length < 2)
+        if (string.IsNullOrWhiteSpace(input.Args))
         {
             await ctx.Reply($"{Ansi.Yellow}Usage:{Ansi.Reset} {Usage}", ct);
             return;
         }
         var old = ctx.Session.Name;
-        var proposed = Sanitizer.SafeText(parts[1]);
+        var proposed = Sanitizer.SafeText(input.Args);
         if (string.IsNullOrWhiteSpace(proposed))
         {
             await ctx.Reply($"{Ansi.Red}That name is not valid.{Ansi.Reset}", ct);

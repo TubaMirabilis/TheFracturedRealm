@@ -9,18 +9,17 @@ internal sealed class HelpCommand : ICommand
     public string Name => "help";
     public string Usage => "help [command]";
     public string Summary => "Show help for commands.";
-    public async Task ExecuteAsync(CommandContext ctx, string raw, CancellationToken ct)
+    public async Task ExecuteAsync(CommandContext ctx, CommandInput input, CancellationToken ct)
     {
         var commands = _getCommands().ToArray();
-        var parts = raw.Split(' ', 2, StringSplitOptions.RemoveEmptyEntries);
-        if (parts.Length == 1)
+        if (string.IsNullOrWhiteSpace(input.Args))
         {
             var lines = commands.OrderBy(c => c.Name)
                                 .Select(c => $"{Ansi.Yellow}{c.Name}{Ansi.Reset} - {c.Summary}");
             await ctx.Reply($"Commands:\n{string.Join("\n", lines)}\n\nTry: {Ansi.Yellow}help say{Ansi.Reset}", ct);
             return;
         }
-        var name = parts[1];
+        var name = input.Args;
         var cmd = commands.FirstOrDefault(c => Matches(c, name));
         if (cmd is null)
         {
