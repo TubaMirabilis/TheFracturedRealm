@@ -66,7 +66,10 @@ internal sealed class TcpServerService : BackgroundService
                 await _inbound.Writer.WriteAsync(new InboundMessage(session, line), ct);
             }
         }
-        catch (IOException) { /* connection dropped */ }
+        catch (IOException)
+        {
+            _log.LogWarning("Connection dropped for {Session}", session);
+        }
         catch (ObjectDisposedException)
         {
             _log.LogWarning("Stream disposed for {Session}", session);
