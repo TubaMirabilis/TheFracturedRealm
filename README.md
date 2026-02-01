@@ -18,6 +18,7 @@ This repo hosts a TCP server and a simple command loop where connected sessions 
     - `help [command]` — show command list or detailed usage
     - `say <message>` (alias: `s`) — speak to everyone
         - Shorthand: a line starting with `'` is treated as `say` (e.g. `'hello`)
+    - `tell <name> <message>` (alias: `t`) — send a private message to another player
 
 If you type something that doesn’t match a command, it falls back to `say`.
 
