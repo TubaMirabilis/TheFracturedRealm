@@ -8,7 +8,7 @@ This repo hosts a TCP server and a simple command loop where connected sessions 
 
 - Listens for TCP connections on **port 4000**
 - Creates a `Session` per client (with an outbound message channel)
-- Routes inbound lines through a single-threaded game loop (`Channel<InboundMessage>`)
+- Routes inbound lines through a single logical game loop (`Channel<InboundMessage>`)
 - Dispatches commands via a lightweight command system (`ICommand` + `CommandDispatcher`)
 - Broadcasts chat/notifications to all connected sessions (`World.Broadcast`)
 - Provides a few starter commands:
@@ -95,13 +95,129 @@ help say
     - `Ansi` defines escape sequences for styling output.
     - `Sanitizer` strips ANSI/control sequences from user input and forces it to one line.
 
-## Design notes
+## Architecture
 
-- **Single-threaded “game loop”:** inbound messages are processed by one reader for deterministic command handling.
-- **Per-session outbound channels:** each session has a writer loop that serializes messages to the socket.
-- **Safety:** user input is sanitized (`Sanitizer.SafeText`) to avoid terminal escape/OSC injection and control characters.
-- **Command ergonomics:** inbound lines are parsed once into `CommandInput` (verb + args).
-  Lines starting with `'` are treated as `say`.
+This project implements a concurrent, thread-safe multiplayer game server using a channel-based architecture that separates networking concerns from game logic. The design focuses on deterministic command processing while safely handling multiple concurrent client connections.
+
+### Single Logical Game Loop
+
+The core game logic runs in a **single logical execution context** via `GameLoopService`, which continuously reads from a shared `Channel<InboundMessage>`. This design choice provides several critical benefits:
+
+- **Deterministic processing:** All commands execute in the order they're received, eliminating race conditions when modifying shared game state (player names, session lists, etc.)
+- **Simplified state management:** No locks or concurrent collections needed for game state since only one thread mutates it
+- **Predictable behavior:** Message ordering is guaranteed, so commands like "name Alice" followed by "say hello" always execute in that sequence
+
+The game loop implementation in `GameLoopService.ExecuteAsync` is straightforward:
+
+```csharp
+while (await reader.WaitToReadAsync(stoppingToken))
+{
+    while (reader.TryRead(out var inbound))
+    {
+        await HandleInbound(inbound, stoppingToken);
+    }
+}
+```
+
+Each inbound message is processed synchronously and completely before moving to the next. Commands can be async (for I/O operations), but only one command executes at a time per the game loop's single-reader pattern.
+
+### Channel-Based Message Flow
+
+The system uses .NET `System.Threading.Channels` for lock-free, high-performance message passing between components:
+
+#### Inbound Flow (Client → Game Loop)
+
+1. `TcpServerService` accepts TCP connections and spawns a reader task per client
+2. Each client's reader task parses incoming lines from the network stream
+3. Messages are written to a **shared unbounded channel** `Channel<InboundMessage>`
+4. The single logical game loop reads from this channel and dispatches commands
+
+This decouples network I/O (potentially many concurrent clients) from command processing (single-threaded, ordered).
+
+```
+[Client 1] ──┐
+[Client 2] ──┤ TcpServerService reader tasks
+[Client 3] ──┤    │
+    ...      ──┘    ├──> Channel<InboundMessage> ──> GameLoopService (single thread)
+```
+
+#### Outbound Flow (Game Loop → Clients)
+
+Each `Session` owns a **private unbounded channel** `Channel<OutboundMessage>` with:
+
+- **Single reader:** the session's dedicated writer loop (in `WriterLoopAsync`)
+- **Multiple writers:** the game loop, broadcast operations, or any command can write to it
+
+When the game loop or a command wants to send output to a client:
+
+1. It calls `session.OutboundWriter.TryWrite(new OutboundMessage(text))`
+2. The session's writer loop (running on a separate task) reads from the channel
+3. Messages are serialized to the TCP stream in order
+
+```
+GameLoopService ──┬──> Session1.OutboundChannel ──> WriterLoopAsync ──> [Client 1]
+                  ├──> Session2.OutboundChannel ──> WriterLoopAsync ──> [Client 2]
+                  └──> Session3.OutboundChannel ──> WriterLoopAsync ──> [Client 3]
+```
+
+Broadcasts iterate over all sessions and write to each session's outbound channel, allowing the game loop to dispatch messages without blocking on network I/O.
+
+### Thread Safety Approach
+
+The architecture achieves thread safety through **isolation and message passing** rather than locks:
+
+#### 1. Session State Isolation
+
+- Each `Session` object is only mutated by the game loop thread
+- Session properties like `Name` are set during command execution (name command)
+- Network I/O tasks only _read_ session data or write to channels (lock-free operations)
+
+#### 2. Channel Synchronization
+
+- Channels provide thread-safe enqueue/dequeue operations internally
+- The `Channel<InboundMessage>` is unbounded, so `TryWrite` never blocks or fails due to capacity
+- Outbound channels are also unbounded with `SingleReader = true, SingleWriter = false`
+
+#### 3. World State Management
+
+- `World` uses a `ConcurrentDictionary<Guid, Session>` for the session registry
+- Add/Remove operations are thread-safe (called from `TcpServerService`)
+- `SnapshotSessions()` creates a point-in-time array copy for safe iteration
+- The game loop only _reads_ sessions from `World`; mutations happen via channels
+
+#### 4. Safe Broadcasts
+
+When broadcasting to all clients:
+
+```csharp
+foreach (var session in _sessions.Values)
+{
+    session.OutboundWriter.TryWrite(new OutboundMessage(line));
+}
+```
+
+This is safe because:
+
+- The `ConcurrentDictionary` allows safe concurrent reads
+- `TryWrite` is thread-safe and non-blocking
+- Even if a session disconnects mid-broadcast, the completed channel simply drops writes
+
+#### 5. Input Sanitization
+
+- All user input passes through `Sanitizer.SafeText` to strip ANSI escape codes and control characters
+- This prevents injection attacks and ensures terminals display output safely
+- Sanitization happens in the game loop before any processing
+
+### Summary
+
+This architecture demonstrates modern .NET concurrency best practices:
+
+- Use channels for inter-thread communication instead of shared mutable state
+- Confine state mutations to a single thread where possible
+- Reserve concurrent collections (`ConcurrentDictionary`) only for registry/lookup scenarios
+- Keep I/O tasks (network reads/writes) separate from business logic (command processing)
+
+The result is a system that scales to many concurrent connections while maintaining simple, predictable game state behavior.
 
 ## Extending the realm
 
