@@ -14,5 +14,6 @@ builder.ConfigureServices((services) =>
     services.AddSingleton<World>();
     services.AddHostedService<TcpServerService>();
     services.AddHostedService<GameLoopService>();
+    services.AddSingleton<CommandDispatcher>();
 });
 await builder.Build().RunAsync();

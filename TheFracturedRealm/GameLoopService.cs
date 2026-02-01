@@ -10,19 +10,13 @@ internal sealed class GameLoopService : BackgroundService
     private readonly ILogger<GameLoopService> _log;
     private readonly Channel<InboundMessage> _inbound;
     private readonly World _world;
-    private readonly CommandDispatcher _dispatcher = new();
-    public GameLoopService(ILogger<GameLoopService> log, Channel<InboundMessage> inbound, World world)
+    private readonly CommandDispatcher _dispatcher;
+    public GameLoopService(CommandDispatcher dispatcher, Channel<InboundMessage> inbound, ILogger<GameLoopService> log, World world)
     {
-        _log = log;
+        _dispatcher = dispatcher;
         _inbound = inbound;
+        _log = log;
         _world = world;
-        _dispatcher.Register(new NameCommand());
-        _dispatcher.Register(new LookCommand());
-        _dispatcher.Register(new WhoCommand());
-        var say = new SayCommand();
-        _dispatcher.Register(say);
-        _dispatcher.Fallback = say;
-        _dispatcher.Register(new HelpCommand(() => _dispatcher.Commands));
     }
     protected override async Task ExecuteAsync(CancellationToken stoppingToken)
     {

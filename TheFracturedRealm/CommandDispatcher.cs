@@ -1,11 +1,17 @@
 using TheFracturedRealm.Abstractions;
+using TheFracturedRealm.Features;
 
 namespace TheFracturedRealm;
 
 internal sealed class CommandDispatcher
 {
     private readonly List<ICommand> _cmds = [];
-    public ICommand? Fallback { get; set; }
+    private readonly ICommand? _fallback;
+    public CommandDispatcher()
+    {
+        RegisterExistingCommands();
+        _fallback = _cmds.FirstOrDefault(c => c is SayCommand);
+    }
     public void Register(ICommand cmd) => _cmds.Add(cmd);
     public async Task<bool> TryDispatchAsync(InboundMessage msg, World world, CancellationToken ct)
     {
@@ -17,12 +23,20 @@ internal sealed class CommandDispatcher
             await cmd.ExecuteAsync(ctx, input, ct);
             return true;
         }
-        if (Fallback is null)
+        if (_fallback is null)
         {
             return false;
         }
-        await Fallback.ExecuteAsync(ctx, input, ct);
+        await _fallback.ExecuteAsync(ctx, input, ct);
         return true;
+    }
+    public void RegisterExistingCommands()
+    {
+        Register(new NameCommand());
+        Register(new LookCommand());
+        Register(new WhoCommand());
+        Register(new SayCommand());
+        Register(new HelpCommand(() => Commands));
     }
     public IEnumerable<ICommand> Commands => _cmds;
 }

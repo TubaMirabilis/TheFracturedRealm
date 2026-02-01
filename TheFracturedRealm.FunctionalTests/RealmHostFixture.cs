@@ -20,6 +20,7 @@ public sealed class RealmHostFixture : IAsyncLifetime
             services.AddSingleton<World>();
             services.AddHostedService<TcpServerService>();
             services.AddHostedService<GameLoopService>();
+            services.AddSingleton<CommandDispatcher>();
         }).Build();
         await Host.StartAsync();
     }
