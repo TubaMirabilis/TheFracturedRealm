@@ -16,8 +16,8 @@ This repo hosts a TCP server and a simple command loop where connected sessions 
     - `look` (alias: `l`) — look around and see who else is present
     - `who` — list connected players
     - `help [command]` — show command list or detailed usage
-    - `say <message>` (aliases: `s`, `'`) — speak to everyone
-        - If a line starts with `'` it’s treated as `say` (e.g. `'hello`)
+    - `say <message>` (alias: `s`) — speak to everyone
+        - Shorthand: a line starting with `'` is treated as `say` (e.g. `'hello`)
 
 If you type something that doesn’t match a command, it falls back to `say`.
 
@@ -76,6 +76,9 @@ help say
 - `World`
   Tracks active sessions and broadcasts messages.
 
+- `CommandDispatcher`
+  Maintains a list of commands, selects the first one that matches a parsed input message to execute it asynchronously, and if none match, falls back to a default “say” command when available.
+
 - `Session`
   Wraps the `TcpClient` and owns an outbound `Channel<OutboundMessage>`.
 
@@ -85,8 +88,8 @@ help say
 - `Abstractions/ICommand.cs`
   Minimal command contract:
     - `Name`, optional `Aliases`, `Usage`, `Summary`
-    - `Matches(line)` helper (verb-based, can be overridden)
-    - `ExecuteAsync(...)`
+    - `Matches(CommandInput)` helper (verb-based)
+    - `ExecuteAsync(CommandContext, CommandInput, CancellationToken)`
 
 - `Ansi` + `Sanitizer`
     - `Ansi` defines escape sequences for styling output.
@@ -97,17 +100,26 @@ help say
 - **Single-threaded “game loop”:** inbound messages are processed by one reader for deterministic command handling.
 - **Per-session outbound channels:** each session has a writer loop that serializes messages to the socket.
 - **Safety:** user input is sanitized (`Sanitizer.SafeText`) to avoid terminal escape/OSC injection and control characters.
-- **Command ergonomics:** verbs are extracted by splitting on the first space; `say` supports shorthand `'message`.
+- **Command ergonomics:** inbound lines are parsed once into `CommandInput` (verb + args).
+  Lines starting with `'` are treated as `say`.
 
 ## Extending the realm
 
 Add a new command:
 
 1. Create a class that implements `ICommand` (see `Features/LookCommand.cs` for a simple example).
-2. Register it in `GameLoopService`’s constructor:
+2. Register it in `CommandDispatcher`:
 
 ```csharp
-_dispatcher.Register(new MyCommand());
+public void RegisterExistingCommands()
+{
+    Register(new NameCommand());
+    Register(new LookCommand());
+    Register(new WhoCommand());
+    Register(new SayCommand());
+    Register(new HelpCommand(() => Commands));
+    Register(new MyCommand());
+}
 ```
 
 Tips:
