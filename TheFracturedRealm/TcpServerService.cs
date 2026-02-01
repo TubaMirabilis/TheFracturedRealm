@@ -72,6 +72,7 @@ internal sealed class TcpServerService : BackgroundService
     private async Task HandleClientAsync(TcpClient client, Guid sessionId, CancellationToken ct)
     {
         var session = new Session(client) { Id = sessionId };
+        _log.LogInformation("Accepted new connection: {Session}", session);
         _world.Add(session);
         using var _ = client;
         var writerTask = WriterLoopAsync(session);

@@ -29,6 +29,7 @@ internal sealed class World
     }
     public void Broadcast(string line, Session? except = null)
     {
+        _log.LogInformation("Broadcasting message to all sessions (except {Except}): {Line}", except, line);
         foreach (var session in _sessions.Values)
         {
             if (except is not null && session.Id == except.Id)
