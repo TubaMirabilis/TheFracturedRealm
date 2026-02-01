@@ -6,11 +6,10 @@ using TheFracturedRealm;
 var builder = Host.CreateDefaultBuilder(args);
 builder.ConfigureServices((services) =>
 {
-    services.AddSingleton(Channel.CreateBounded<InboundMessage>(new BoundedChannelOptions(2000)
+    services.AddSingleton(Channel.CreateUnbounded<InboundMessage>(new UnboundedChannelOptions
     {
         SingleReader = true,
-        SingleWriter = false,
-        FullMode = BoundedChannelFullMode.DropOldest
+        SingleWriter = false
     }));
     services.AddSingleton<World>();
     services.AddHostedService<TcpServerService>();

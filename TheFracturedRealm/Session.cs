@@ -16,13 +16,12 @@ internal sealed class Session
     public ChannelWriter<OutboundMessage> OutboundWriter => _outbound.Writer;
     public Session(TcpClient client)
     {
-        var options = new BoundedChannelOptions(250)
+        var options = new UnboundedChannelOptions
         {
             SingleReader = true,
-            SingleWriter = false,
-            FullMode = BoundedChannelFullMode.DropOldest
+            SingleWriter = false
         };
-        _outbound = Channel.CreateBounded<OutboundMessage>(options);
+        _outbound = Channel.CreateUnbounded<OutboundMessage>(options);
         Client = client;
         Stream = client.GetStream();
         RemoteEndPoint = client.Client.RemoteEndPoint;
