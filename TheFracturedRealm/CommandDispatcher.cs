@@ -36,6 +36,7 @@ internal sealed class CommandDispatcher
         Register(new LookCommand());
         Register(new WhoCommand());
         Register(new SayCommand());
+        Register(new TellCommand());
         Register(new HelpCommand(() => Commands));
     }
     public IEnumerable<ICommand> Commands => _cmds;
