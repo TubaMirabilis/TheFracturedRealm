@@ -6,7 +6,7 @@ namespace TheFracturedRealm.FunctionalTests;
 
 public sealed class RealmClient : IAsyncDisposable
 {
-    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(15);
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);
     public static readonly StringComparison DefaultComparison = StringComparison.OrdinalIgnoreCase;
     private readonly TcpClient _client;
     private readonly NetworkStream _stream;
@@ -88,25 +88,57 @@ public sealed class RealmClient : IAsyncDisposable
     }
     public Task SendLineAsync(string line, CancellationToken ct = default)
         => _writer.WriteLineAsync(line.AsMemory(), ct);
-    public async Task<string> WaitForLineAsync(Func<string, bool> predicate, TimeSpan timeout)
+    public async Task<string> WaitForLineAsync(
+    Func<string, bool> predicate,
+    TimeSpan timeout,
+    CancellationToken ct = default)
     {
-        using var tcs = new CancellationTokenSource(timeout);
-        while (await _lines.Reader.WaitToReadAsync(tcs.Token))
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            _cts.Token, ct, timeoutCts.Token);
+
+        try
         {
-            while (_lines.Reader.TryRead(out var line))
+            while (true)
             {
-                if (predicate(line))
+                // Fast path: consume anything already queued
+                while (_lines.Reader.TryRead(out var line))
                 {
-                    return line;
+                    if (predicate(line))
+                    {
+                        return line;
+                    }
+                }
+
+                // Slow path: wait for exactly one next line
+                var next = await _lines.Reader.ReadAsync(linked.Token).ConfigureAwait(false);
+                if (predicate(next))
+                {
+                    return next;
                 }
             }
         }
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !_cts.IsCancellationRequested && !ct.IsCancellationRequested)
+        {
+            throw BuildTimeout(timeout, "a matching line");
+        }
+        catch (ChannelClosedException)
+        {
+            // Producer is done; treat as timeout-ish but include log
+            throw BuildTimeout(timeout, "a matching line (channel closed)");
+        }
+    }
+
+    private TimeoutException BuildTimeout(TimeSpan timeout, string waitingFor)
+    {
         string recent;
         lock (_recentLock)
         {
             recent = string.Join('\n', _recent);
         }
-        throw new TimeoutException($"Timed out after {timeout} waiting for a matching line. Recent log:\n{recent}");
+
+        return new TimeoutException(
+            $"Timed out after {timeout} waiting for {waitingFor}. Recent log:\n{recent}");
     }
     public async Task<IReadOnlyList<string>> DrainAsync(TimeSpan duration)
     {
@@ -139,37 +171,70 @@ public sealed class RealmClient : IAsyncDisposable
         try { await _stream.DisposeAsync().ConfigureAwait(false); } catch { /* ignore */ }
         _client.Dispose();
     }
-    public async Task<IReadOnlyList<string>> WaitForLinesAsync(IReadOnlyList<Func<string, bool>> predicates, TimeSpan timeout, bool allowInterleaving = true)
+    public async Task<IReadOnlyList<string>> WaitForLinesAsync(
+    IReadOnlyList<Func<string, bool>> predicates,
+    TimeSpan timeout,
+    bool allowInterleaving = true,
+    CancellationToken ct = default)
     {
-        using var tcs = new CancellationTokenSource(timeout);
-        var matched = new List<string>(capacity: predicates.Count);
+        using var timeoutCts = new CancellationTokenSource(timeout);
+        using var linked = CancellationTokenSource.CreateLinkedTokenSource(
+            _cts.Token, ct, timeoutCts.Token);
+
+        var matched = new List<string>(predicates.Count);
         var index = 0;
-        while (index < predicates.Count && await _lines.Reader.WaitToReadAsync(tcs.Token))
+
+        try
         {
-            while (index < predicates.Count && _lines.Reader.TryRead(out var line))
+            while (index < predicates.Count)
             {
-                if (predicates[index](line))
+                // drain buffered
+                while (_lines.Reader.TryRead(out var line))
                 {
-                    matched.Add(line);
+                    if (predicates[index](line))
+                    {
+                        matched.Add(line);
+                        index++;
+                        if (index == predicates.Count)
+                        {
+                            return matched;
+                        }
+
+                        continue;
+                    }
+
+                    if (!allowInterleaving)
+                    {
+                        throw new InvalidOperationException(
+                            $"Expected line {index + 1} of {predicates.Count}, but got: {line}");
+                    }
+                }
+
+                // wait for one more line
+                var next = await _lines.Reader.ReadAsync(linked.Token).ConfigureAwait(false);
+
+                if (predicates[index](next))
+                {
+                    matched.Add(next);
                     index++;
-                    continue;
                 }
-                if (!allowInterleaving)
+                else if (!allowInterleaving)
                 {
-                    throw new InvalidOperationException($"Expected line {index + 1} of {predicates.Count}, but got: {line}");
+                    throw new InvalidOperationException(
+                        $"Expected line {index + 1} of {predicates.Count}, but got: {next}");
                 }
             }
+
+            return matched;
         }
-        if (index != predicates.Count)
+        catch (OperationCanceledException) when (timeoutCts.IsCancellationRequested && !_cts.IsCancellationRequested && !ct.IsCancellationRequested)
         {
-            string recent;
-            lock (_recentLock)
-            {
-                recent = string.Join('\n', _recent);
-            }
-            throw new TimeoutException($"Timed out after {timeout} waiting for {predicates.Count} matching lines in order. Matched {index} lines. Recent log:\n{recent}");
+            throw BuildTimeout(timeout, $"{predicates.Count} matching lines in order. Matched {index}");
         }
-        return matched;
+        catch (ChannelClosedException)
+        {
+            throw BuildTimeout(timeout, $"{predicates.Count} matching lines (channel closed). Matched {index}");
+        }
     }
     public Task<IReadOnlyList<string>> ExpectAsync(TimeSpan timeout, params string[] containsInOrder)
     {
@@ -182,7 +247,12 @@ public sealed class RealmClient : IAsyncDisposable
         comparison = comparison == default ? DefaultComparison : comparison;
         return line => Sanitizer.StripAnsi(line).Contains(expected, comparison);
     }
-    public Task<string> WaitForContainsAsync(string expected, TimeSpan? timeout = null, StringComparison comparison = default) => WaitForLineAsync(ContainsPredicate(expected, comparison), timeout ?? DefaultTimeout);
+    public Task<string> WaitForContainsAsync(
+    string expected,
+    TimeSpan? timeout = null,
+    StringComparison comparison = default,
+    CancellationToken ct = default)
+    => WaitForLineAsync(ContainsPredicate(expected, comparison), timeout ?? DefaultTimeout, ct);
     public async Task<string> SendAndWaitAsync(string command, string expectedResponse, CancellationToken ct, TimeSpan? timeout = null)
     {
         await SendLineAsync(command, ct);
