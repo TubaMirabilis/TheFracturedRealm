@@ -6,6 +6,7 @@
     <OutputType>Exe</OutputType>
     <RootNamespace>TheFracturedRealm.FunctionalTests</RootNamespace>
     <TargetFramework>net10.0</TargetFramework>
+    <SelfContained>true</SelfContained>
   </PropertyGroup>
 
   <ItemGroup>

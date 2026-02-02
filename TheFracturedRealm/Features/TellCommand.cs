@@ -33,6 +33,11 @@ internal sealed class TellCommand : ICommand
             await ctx.Reply($"{Ansi.Red}Message cannot be empty.{Ansi.Reset}", ct);
             return;
         }
+        if (string.Equals(ctx.Session.Name, targetName, StringComparison.OrdinalIgnoreCase))
+        {
+            await ctx.Reply($"{Ansi.Red}You cannot send a message to yourself.{Ansi.Reset}", ct);
+            return;
+        }
         var targetSession = ctx.World.SnapshotSessions()
             .FirstOrDefault(s => !ReferenceEquals(s, ctx.Session) &&
                 !string.IsNullOrWhiteSpace(s.Name) &&

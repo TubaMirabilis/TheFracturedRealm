@@ -48,7 +48,6 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("Welcome, Alice! Type help to get started.");
     }
 
-    // Names cannot be longer than 20 characters
     [Fact, TestPriority(3)]
     public async Task NameCommandRejectsNamesThatAreTooLong()
     {
@@ -212,5 +211,21 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi("Who:");
         fullOutput.ShouldContainWithoutAnsi(" - Alice");
         fullOutput.ShouldContainWithoutAnsi(" - Bob");
+    }
+
+    [Fact, TestPriority(13)]
+    public async Task TellCommandSendsPrivateMessageBetweenPlayers()
+    {
+        // Arrange
+        await using var c1 = await RealmClient.ConnectAndNameAsync("Alice", ct: TestContext.Current.CancellationToken);
+        await using var c2 = await RealmClient.ConnectAndNameAsync("Bob", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        var sendResponse = await c1.SendAndWaitAsync("tell Bob Hello Bob!", "You tell Bob: Hello Bob!", TestContext.Current.CancellationToken);
+        var receiveLines = await c2.ExpectAsync(RealmClient.DefaultTimeout, "Message from Alice: Hello Bob!");
+
+        // Assert
+        sendResponse.ShouldContainWithoutAnsi("You tell Bob: Hello Bob!");
+        receiveLines[0].ShouldContainWithoutAnsi("Message from Alice: Hello Bob!");
     }
 }
