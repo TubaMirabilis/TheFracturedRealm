@@ -214,6 +214,45 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
     }
 
     [Fact, TestPriority(13)]
+    public async Task TellCommandShowsUsageWhenNoArgumentsProvided()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("Dave", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        var response = await c.SendAndWaitAsync("tell", "Usage: tell <name> <message>", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("Usage: tell <name> <message>");
+    }
+
+    [Fact, TestPriority(14)]
+    public async Task TellCommandRejectsWhenSenderHasNoNameSet()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAtPromptAsync();
+
+        // Act
+        var response = await c.SendAndWaitAsync("tell Bob Hello Bob!", "Set your handle first: name <yourname>", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("Set your handle first: name <yourname>");
+    }
+
+    [Fact, TestPriority(15)]
+    public async Task TellCommandRejectsSendingMessageToSelf()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAndNameAsync("Charlie", ct: TestContext.Current.CancellationToken);
+
+        // Act
+        var response = await c.SendAndWaitAsync("tell Charlie Hello me!", "You cannot send a message to yourself.", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("You cannot send a message to yourself.");
+    }
+
+    [Fact, TestPriority(16)]
     public async Task TellCommandSendsPrivateMessageBetweenPlayers()
     {
         // Arrange
