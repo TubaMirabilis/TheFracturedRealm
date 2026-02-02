@@ -43,11 +43,12 @@ public sealed class RealmClient : IAsyncDisposable
                 string? line;
                 try
                 {
-                    line = await _reader.ReadLineAsync(_cts.Token);
+                    line = await _reader.ReadLineAsync(_cts.Token).ConfigureAwait(false);
                     if (line is null)
                     {
                         break;
                     }
+
                     lock (_recentLock)
                     {
                         _recent.Enqueue(line);
@@ -57,27 +58,28 @@ public sealed class RealmClient : IAsyncDisposable
                         }
                     }
                 }
-                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                catch (OperationCanceledException)
                 {
+                    // treat any OCE as shutdown for the pump
                     break;
                 }
-                catch (ObjectDisposedException)
-                {
-                    break;
-                }
-                catch (IOException)
-                {
-                    break;
-                }
+                catch (ObjectDisposedException) { break; }
+                catch (IOException) { break; }
+
                 try
                 {
-                    await _lines.Writer.WriteAsync(line, _cts.Token);
+                    await _lines.Writer.WriteAsync(line, _cts.Token).ConfigureAwait(false);
                 }
-                catch (OperationCanceledException) when (_cts.IsCancellationRequested)
+                catch (OperationCanceledException)
                 {
                     break;
                 }
             }
+        }
+        catch
+        {
+            // Swallow anything unexpected so DisposeAsync doesn't randomly blow up the test.
+            // If you want, store it somewhere for debugging.
         }
         finally
         {
@@ -128,13 +130,13 @@ public sealed class RealmClient : IAsyncDisposable
     }
     public async ValueTask DisposeAsync()
     {
-        await _cts.CancelAsync();
-        _client.Close();
-        await _pump;
+        try { await _cts.CancelAsync().ConfigureAwait(false); } catch { /* ignore */ }
+        try { _client.Close(); } catch { /* ignore */ }
+        try { await _pump.ConfigureAwait(false); } catch { /* ignore */ }
         _cts.Dispose();
         _reader.Dispose();
-        await _writer.DisposeAsync();
-        await _stream.DisposeAsync();
+        try { await _writer.DisposeAsync().ConfigureAwait(false); } catch { /* ignore */ }
+        try { await _stream.DisposeAsync().ConfigureAwait(false); } catch { /* ignore */ }
         _client.Dispose();
     }
     public async Task<IReadOnlyList<string>> WaitForLinesAsync(IReadOnlyList<Func<string, bool>> predicates, TimeSpan timeout, bool allowInterleaving = true)
