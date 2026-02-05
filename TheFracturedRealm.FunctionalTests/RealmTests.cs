@@ -36,16 +36,16 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
     }
 
     [Fact, TestPriority(2)]
-    public async Task NameCommandSetsHandleAndShowsGettingStartedHint()
+    public async Task NameCommandRejectsNamesWithWhitespace()
     {
         // Arrange
         await using var c = await RealmClient.ConnectAtPromptAsync();
 
         // Act
-        var response = await c.SendAndWaitAsync("name Alice", "Welcome, Alice! Type help to get started.", TestContext.Current.CancellationToken);
+        var response = await c.SendAndWaitAsync("name Big Bob", "Names cannot contain spaces.", TestContext.Current.CancellationToken);
 
         // Assert
-        response.ShouldContainWithoutAnsi("Welcome, Alice! Type help to get started.");
+        response.ShouldContainWithoutAnsi("Names cannot contain spaces.");
     }
 
     [Fact, TestPriority(3)]
@@ -62,6 +62,19 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
     }
 
     [Fact, TestPriority(4)]
+    public async Task NameCommandSetsHandleAndShowsGettingStartedHint()
+    {
+        // Arrange
+        await using var c = await RealmClient.ConnectAtPromptAsync();
+
+        // Act
+        var response = await c.SendAndWaitAsync("name Alice", "Welcome, Alice! Type help to get started.", TestContext.Current.CancellationToken);
+
+        // Assert
+        response.ShouldContainWithoutAnsi("Welcome, Alice! Type help to get started.");
+    }
+
+    [Fact, TestPriority(5)]
     public async Task CanSayAfterNaming()
     {
         // Arrange
@@ -74,7 +87,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("You say: Hello everyone!");
     }
 
-    [Fact, TestPriority(5)]
+    [Fact, TestPriority(6)]
     public async Task CanSayWithLeadingApostropheAfterNaming()
     {
         // Arrange
@@ -87,7 +100,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("You say: Hello everyone!");
     }
 
-    [Fact, TestPriority(6)]
+    [Fact, TestPriority(7)]
     public async Task CanSayWithoutLeadingApostropheAfterNaming()
     {
         // Arrange
@@ -100,7 +113,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("You say: Hello everyone!");
     }
 
-    [Fact, TestPriority(7)]
+    [Fact, TestPriority(8)]
     public async Task HelpCommandShowsGeneralHelpListing()
     {
         // Arrange
@@ -121,7 +134,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         lines[^1].ShouldContainWithoutAnsi("Try: help");
     }
 
-    [Fact, TestPriority(8)]
+    [Fact, TestPriority(9)]
     public async Task HelpCommandShowsCommandsInAlphabeticalOrder()
     {
         // Arrange
@@ -146,7 +159,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         whoIndex.ShouldBeGreaterThan(sayIndex);
     }
 
-    [Fact, TestPriority(9)]
+    [Fact, TestPriority(10)]
     public async Task HelpCommandShowsCommandSpecificHelp()
     {
         // Arrange
@@ -164,7 +177,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi("say <message>");
     }
 
-    [Fact, TestPriority(10)]
+    [Fact, TestPriority(11)]
     public async Task HelpCommandShowsErrorForInvalidCommand()
     {
         // Arrange
@@ -177,7 +190,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("No help for 'invalidcommand'");
     }
 
-    [Fact, TestPriority(11)]
+    [Fact, TestPriority(12)]
     public async Task LookCommandShowsRoomDescriptionAndOtherPlayers()
     {
         // Arrange
@@ -195,7 +208,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi("(no one)");
     }
 
-    [Fact, TestPriority(12)]
+    [Fact, TestPriority(13)]
     public async Task WhoCommandListsConnectedPlayers()
     {
         // Arrange
@@ -213,7 +226,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         fullOutput.ShouldContainWithoutAnsi(" - Bob");
     }
 
-    [Fact, TestPriority(13)]
+    [Fact, TestPriority(14)]
     public async Task TellCommandShowsUsageWhenNoArgumentsProvided()
     {
         // Arrange
@@ -226,7 +239,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("Usage: tell <name> <message>");
     }
 
-    [Fact, TestPriority(14)]
+    [Fact, TestPriority(15)]
     public async Task TellCommandRejectsWhenSenderHasNoNameSet()
     {
         // Arrange
@@ -239,7 +252,7 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("Set your handle first: name <yourname>");
     }
 
-    [Fact, TestPriority(15)]
+    [Fact, TestPriority(16)]
     public async Task TellCommandRejectsSendingMessageToSelf()
     {
         // Arrange
@@ -252,19 +265,19 @@ public sealed class RealmTests : IClassFixture<RealmHostFixture>
         response.ShouldContainWithoutAnsi("You cannot send a message to yourself.");
     }
 
-    [Fact, TestPriority(16)]
+    [Fact, TestPriority(17)]
     public async Task TellCommandSendsPrivateMessageBetweenPlayers()
     {
         // Arrange
-        await using var c1 = await RealmClient.ConnectAndNameAsync("Alice", ct: TestContext.Current.CancellationToken);
-        await using var c2 = await RealmClient.ConnectAndNameAsync("Bob", ct: TestContext.Current.CancellationToken);
+        await using var c1 = await RealmClient.ConnectAndNameAsync("Dave", ct: TestContext.Current.CancellationToken);
+        await using var c2 = await RealmClient.ConnectAndNameAsync("Emily", ct: TestContext.Current.CancellationToken);
 
         // Act
-        var sendResponse = await c1.SendAndWaitAsync("tell Bob Hello Bob!", "You tell Bob: Hello Bob!", TestContext.Current.CancellationToken);
-        var receiveLines = await c2.ExpectAsync(RealmClient.DefaultTimeout, "Message from Alice: Hello Bob!");
+        var sendResponse = await c1.SendAndWaitAsync("tell Emily Hello Emily!", "You tell Emily: Hello Emily!", TestContext.Current.CancellationToken);
+        var receiveLines = await c2.ExpectAsync(RealmClient.DefaultTimeout, "Message from Dave: Hello Emily!");
 
         // Assert
-        sendResponse.ShouldContainWithoutAnsi("You tell Bob: Hello Bob!");
-        receiveLines[0].ShouldContainWithoutAnsi("Message from Alice: Hello Bob!");
+        sendResponse.ShouldContainWithoutAnsi("You tell Emily: Hello Emily!");
+        receiveLines[0].ShouldContainWithoutAnsi("Message from Dave: Hello Emily!");
     }
 }

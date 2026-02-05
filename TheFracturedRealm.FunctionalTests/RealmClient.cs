@@ -6,7 +6,7 @@ namespace TheFracturedRealm.FunctionalTests;
 
 public sealed class RealmClient : IAsyncDisposable
 {
-    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(10);
+    public static readonly TimeSpan DefaultTimeout = TimeSpan.FromSeconds(2);
     public static readonly StringComparison DefaultComparison = StringComparison.OrdinalIgnoreCase;
     private readonly TcpClient _client;
     private readonly NetworkStream _stream;

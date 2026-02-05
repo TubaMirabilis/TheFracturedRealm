@@ -21,16 +21,21 @@ internal sealed class NameCommand : ICommand
             await ctx.Reply($"{Ansi.Red}That name is not valid.{Ansi.Reset}", ct);
             return;
         }
-        if (ctx.World.SnapshotSessions().Any(s => !ReferenceEquals(s, ctx.Session) &&
-            !string.IsNullOrWhiteSpace(s.Name) &&
-            string.Equals(s.Name, proposed, StringComparison.OrdinalIgnoreCase)))
+        if (proposed.Any(char.IsWhiteSpace))
         {
-            await ctx.Reply($"{Ansi.Red}That handle is already taken.{Ansi.Reset}", ct);
+            await ctx.Reply($"{Ansi.Red}Names cannot contain spaces.{Ansi.Reset}", ct);
             return;
         }
         if (proposed.Length > 20)
         {
             await ctx.Reply($"{Ansi.Red}That name is a bit long (max 20).{Ansi.Reset}", ct);
+            return;
+        }
+        if (ctx.World.SnapshotSessions().Any(s => !ReferenceEquals(s, ctx.Session) &&
+            !string.IsNullOrWhiteSpace(s.Name) &&
+            string.Equals(s.Name, proposed, StringComparison.OrdinalIgnoreCase)))
+        {
+            await ctx.Reply($"{Ansi.Red}That handle is already taken.{Ansi.Reset}", ct);
             return;
         }
         ctx.Session.Name = proposed;
