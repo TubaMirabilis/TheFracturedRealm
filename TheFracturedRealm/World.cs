@@ -14,7 +14,10 @@ internal sealed class World
     public void CloseAllSessions()
     {
         var sessions = SnapshotSessions();
-        _log.LogInformation("Forcefully closing {Count} active sessions", sessions.Length);
+        if (_log.IsEnabled(LogLevel.Information))
+        {
+            _log.LogInformation("Forcefully closing {Count} active sessions", sessions.Length);
+        }
         foreach (var session in sessions)
         {
             try
@@ -29,7 +32,10 @@ internal sealed class World
     }
     public void Broadcast(string line, Session? except = null)
     {
-        _log.LogInformation("Broadcasting message to all sessions (except {Except}): {Line}", except, line);
+        if (_log.IsEnabled(LogLevel.Information))
+        {
+            _log.LogInformation("Broadcasting message to all sessions (except {Except}): {Line}", except, line);
+        }
         foreach (var session in _sessions.Values)
         {
             if (except is not null && session.Id == except.Id)

@@ -63,7 +63,7 @@ internal sealed class TcpServerService : BackgroundService
             {
                 _clientTasks.TryRemove(key, out _);
             }
-            if (completedKeys.Count > 0)
+            if (completedKeys.Count > 0 && _log.IsEnabled(LogLevel.Debug))
             {
                 _log.LogDebug("Pruned {Count} completed client tasks", completedKeys.Count);
             }
@@ -72,7 +72,10 @@ internal sealed class TcpServerService : BackgroundService
     private async Task HandleClientAsync(TcpClient client, Guid sessionId, CancellationToken ct)
     {
         var session = new Session(client) { Id = sessionId };
-        _log.LogInformation("Accepted new connection: {Session}", session);
+        if (_log.IsEnabled(LogLevel.Information))
+        {
+            _log.LogInformation("Accepted new connection: {Session}", session);
+        }
         _world.Add(session);
         using var _ = client;
         var writerTask = WriterLoopAsync(session);
@@ -116,7 +119,10 @@ internal sealed class TcpServerService : BackgroundService
             _world.Remove(session);
             _world.Broadcast($"{Ansi.Dim}* {session} has left the world.{Ansi.Reset}");
             session.OutboundWriter.TryComplete();
-            _log.LogInformation("Disconnected {Session}", session);
+            if (_log.IsEnabled(LogLevel.Information))
+            {
+                _log.LogInformation("Disconnected {Session}", session);
+            }
         }
         await writerTask;
         _clientTasks.TryRemove(sessionId, out var _);
@@ -145,7 +151,10 @@ internal sealed class TcpServerService : BackgroundService
     public override async Task StopAsync(CancellationToken cancellationToken)
     {
         _listener.Stop();
-        _log.LogInformation("Waiting for {Count} active client connections to complete...", _clientTasks.Count);
+        if (_log.IsEnabled(LogLevel.Information))
+        {
+            _log.LogInformation("Waiting for {Count} active client connections to complete...", _clientTasks.Count);
+        }
         _world.CloseAllSessions();
         var activeTasks = _clientTasks.Values.ToArray();
         if (activeTasks.Length > 0)
